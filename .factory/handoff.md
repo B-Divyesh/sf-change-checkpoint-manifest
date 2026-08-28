@@ -1,4 +1,12 @@
-# Change Checkpoints repair handoff
+# Change Checkpoints review handoff
+
+## Review 1 — 2026-08-28 UTC
+
+Independent first-read QA is recorded in `.factory/review-1.md` for candidate `1e967c63075e93cd004e4f46f4085df5493d486b`. **Verdict: FAIL.** No product code was changed. The review confirms cold mobile/desktop clarity, demo isolation, the CLI temp-dir demo, live links, and all 13 declared claims. It records six P2/P3 documentation/site-contract findings: direct-404 metadata/skeleton inconsistency, two unlisted operational claims, first-screen jargon, process jargon, an unclear heading, and an unnamed demo-exit result.
+
+Verification used clean clone `/tmp/change-checkpoint-review.LXqQ6q` with `npm ci`, the declared claim commands, the combined claims suite (9 tests for 13 IDs), and `cargo run --quiet -- demo --json`. The live URL was checked at 390 px and 1440 px, including `/`, `/demo`, `/privacy`, `/terms`, the unknown 404 route, and public assets. See the review for exact evidence.
+
+The remaining historical repair/verification record follows.
 
 ## Independent verifier outcome — 2026-08-28 UTC
 
