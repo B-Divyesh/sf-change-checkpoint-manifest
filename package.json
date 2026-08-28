@@ -1,0 +1,19 @@
+{
+  "name": "change-checkpoint-manifest",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "npm run dev:site",
+    "dev:site": "vite --config site/vite.config.js",
+    "build": "cargo build --release && npm run build:site",
+    "build:site": "vite build --config site/vite.config.js",
+    "test": "cargo test && playwright test",
+    "test:claims": "playwright test --grep @claim",
+    "pack:cli": "cargo package --allow-dirty"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "^4.11.0",
+    "@playwright/test": "1.58.2",
+    "vite": "6.1.0"
+  }
+}

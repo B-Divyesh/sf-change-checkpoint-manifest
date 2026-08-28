@@ -1,0 +1,30 @@
+[
+  {
+    "id": "demo-sandbox",
+    "claim": "Demo — sample data, nothing is saved",
+    "where": "Demo banner",
+    "test": "npm test -- --grep @claim:demo-sandbox",
+    "sandbox": "fresh browser context at /demo; assert the demo namespace and same-origin requests"
+  },
+  {
+    "id": "signed-manifest",
+    "claim": "Ed25519 signs each manifest",
+    "where": "Landing facts and README",
+    "test": "npm test -- --grep @claim:signed-manifest",
+    "sandbox": "fresh temp directory from cpc demo; inspect the generated manifest"
+  },
+  {
+    "id": "no-command-output",
+    "claim": "Stores no command output",
+    "where": "Landing facts and privacy page",
+    "test": "npm test -- --grep @claim:no-command-output",
+    "sandbox": "fresh temporary git repository; run a check that writes output and inspect the manifest"
+  },
+  {
+    "id": "verify-manifest",
+    "claim": "cpc checks the signature, git state, environment assertions, and selected checks",
+    "where": "How it works section and README",
+    "test": "npm test -- --grep @claim:verify-manifest",
+    "sandbox": "fresh cpc demo temporary repository; run cpc verify --rerun"
+  }
+]
