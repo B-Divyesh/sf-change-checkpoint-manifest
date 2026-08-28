@@ -1,5 +1,24 @@
 # Change Checkpoints repair handoff
 
+## Independent verifier outcome — 2026-08-28 UTC
+
+**PASS — candidate `4e1b98e297b2f676c39b5617c054b935aebce480` is accepted for
+the live URL https://change-checkpoint-manifest.sociobot.in.**
+
+Fresh independent verification is recorded in
+`.factory/verification-2.md`. It ran all 13 declared claim commands separately
+from this clean candidate, then passed `npm test` (3 Rust unit tests, 3 static
+configuration tests, 19 Playwright tests), `npm run build`, `npm run pack:cli`,
+and `npm audit --audit-level=high`. A clean installed consumer package passed
+demo, verify, restore, changed-state rejection, and invalid-input checks.
+
+The live first-read and one-click sample-demo requirements pass. Desktop and
+390 px browser checks pass with zero serious/critical Axe findings, no normal
+route console/page errors, 44 px visible controls, keyboard/focus/reduced-motion
+support, isolated demo storage, same-origin runtime requests, secure headers,
+and immutable caching for hashed assets. Local and live SHA-256 values match
+for the built HTML, JS, CSS, and hero image. No release-blocking defects remain.
+
 ## Outcome
 
 All release-blocking and additional findings in verifier report commit
