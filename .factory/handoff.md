@@ -23,8 +23,8 @@ in review commit `d16a49ea40fc516d6fff8a62ba9a5bfa211358e6`. It is pushed to
 
 ## Exact verification evidence
 
-- Fresh GitHub clone: `/tmp/change-checkpoints-clean-MRbQ55` at
-  `9dc8b34a7e72adbc6c27cc8fbd7f0addb43640d5`; `npm ci` passed with 0
+- Final fresh GitHub clone: `/tmp/change-checkpoints-final-clean-XV0IPw` at
+  `f13bcc3e31a6dbf211e3f4209276683f3fb43177`; `npm ci` passed with 0
   vulnerabilities. Every one of the 15 commands named in `.factory/claims.json`
   ran from that clone and passed.
 - Full local gate: `npm test` passed: Rust format + Clippy, 3 Rust unit tests,
