@@ -55,9 +55,24 @@ test('keyboard paths expose the demo action and visible result', async ({ page }
 });
 
 test('home and demo have no serious accessibility violations', async ({ page }) => {
-  for (const route of ['/', '/demo']) {
+  for (const route of ['/', '/demo', '/404.html']) {
     await page.goto(route);
     const results = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa']).analyze();
     expect(results.violations).toEqual([]);
   }
+});
+
+test('the designed 404 page loads cleanly and returns home by keyboard', async ({ page }) => {
+  const errors = [];
+  page.on('console', message => { if (message.type() === 'error') errors.push(message.text()); });
+  page.on('pageerror', error => errors.push(error.message));
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/404.html');
+  await expect(page).toHaveTitle('Page not found — Change Checkpoints');
+  await expect(page.getByRole('heading', { name: 'That checkpoint page is not here' })).toBeVisible();
+  await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  await page.getByRole('link', { name: 'Go to Change Checkpoints' }).focus();
+  await page.keyboard.press('Enter');
+  await expect(page).toHaveURL(/\/$/);
+  expect(errors).toEqual([]);
 });

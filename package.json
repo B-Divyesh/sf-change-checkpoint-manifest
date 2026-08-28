@@ -2,13 +2,15 @@
   "name": "change-checkpoint-manifest",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
   "scripts": {
     "dev": "npm run dev:site",
     "dev:site": "vite --config site/vite.config.js",
     "build": "cargo build --release && npm run build:site",
     "build:site": "vite build --config site/vite.config.js",
-    "test": "cargo test && playwright test",
+    "test": "cargo test && npm run test:deployment-config && playwright test",
     "test:claims": "playwright test --grep @claim",
+    "test:deployment-config": "npm run build:site && node --test tests/staticwebapp-config.test.js",
     "pack:cli": "cargo package --allow-dirty"
   },
   "devDependencies": {
