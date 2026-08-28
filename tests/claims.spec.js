@@ -76,3 +76,13 @@ test('the designed 404 page loads cleanly and returns home by keyboard', async (
   await expect(page).toHaveURL(/\/$/);
   expect(errors).toEqual([]);
 });
+
+test('mobile demo has no horizontal overflow or serious accessibility violations', async ({ browser }) => {
+  const context = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, deviceScaleFactor: 2 });
+  const page = await context.newPage();
+  await page.goto('/demo');
+  await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  const results = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa']).analyze();
+  expect(results.violations).toEqual([]);
+  await context.close();
+});

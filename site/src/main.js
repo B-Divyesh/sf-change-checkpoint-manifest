@@ -1,4 +1,5 @@
 import './style.css';
+import './repair.css';
 
 const API = 'https://api.sociobot.in/api/v1/products/change-checkpoint-manifest';
 const app = document.querySelector('#app');
