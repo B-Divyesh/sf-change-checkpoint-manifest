@@ -1,0 +1,75 @@
+{
+  "reports": [
+    {
+      "route": "/",
+      "status": 200,
+      "title": "Change Checkpoints — Record checks with each change",
+      "h1": 1,
+      "main": 1,
+      "axe": [],
+      "undersized": []
+    },
+    {
+      "route": "/demo",
+      "status": 200,
+      "title": "Demo — Change Checkpoints",
+      "h1": 1,
+      "main": 1,
+      "axe": [],
+      "undersized": []
+    },
+    {
+      "route": "/privacy",
+      "status": 200,
+      "title": "Privacy — Change Checkpoints",
+      "h1": 1,
+      "main": 1,
+      "axe": [],
+      "undersized": []
+    },
+    {
+      "route": "/terms",
+      "status": 200,
+      "title": "Terms — Change Checkpoints",
+      "h1": 1,
+      "main": 1,
+      "axe": [],
+      "undersized": []
+    },
+    {
+      "route": "/404.html",
+      "status": 200,
+      "title": "Change Checkpoints — Page not found",
+      "h1": 1,
+      "main": 1,
+      "axe": [],
+      "undersized": []
+    }
+  ],
+  "unknownStatus": 404,
+  "banner": true,
+  "demoKey": [
+    "demo:change-checkpoints:state"
+  ],
+  "resetValue": "sample",
+  "exitUrl": "https://change-checkpoint-manifest.sociobot.in/#install",
+  "afterExit": [],
+  "notFoundMeta": {
+    "canonical": "https://change-checkpoint-manifest.sociobot.in/404",
+    "apple": 1,
+    "og": "Change Checkpoints — Page not found",
+    "install": 1,
+    "footer": "Signed context for a change.\n\nPrivacy\n·\nTerms\n· Built by Param Factory · v0.1.0"
+  },
+  "serviceWorkers": 0,
+  "unexpectedErrors": [],
+  "expectedUnknown404Console": [
+    {
+      "url": "https://change-checkpoint-manifest.sociobot.in/does-not-exist",
+      "text": "Failed to load resource: the server responded with a status of 404 ()"
+    }
+  ],
+  "origins": [
+    "https://change-checkpoint-manifest.sociobot.in"
+  ]
+}

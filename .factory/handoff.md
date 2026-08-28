@@ -1,4 +1,57 @@
-# Change Checkpoints review handoff
+# Change Checkpoints polish 1 handoff
+
+## Completed repair — 2026-08-28 UTC
+
+Repair commit `9dc8b34a7e72adbc6c27cc8fbd7f0addb43640d5` closes every finding
+in review commit `d16a49ea40fc516d6fff8a62ba9a5bfa211358e6`. It is pushed to
+`origin/main` and deployed to https://change-checkpoint-manifest.sociobot.in.
+
+- The first screen now avoids unexplained cryptographic jargon. Process copy
+  uses “hash of the changes” and “saved environment checks,” and the boundary
+  heading names the product result clearly.
+- `/?demo=1` is the one-click, isolated sample entry point; `/demo` remains a
+  deep link. Its banner says “Demo — sample data, nothing is saved,” Reset
+  reseeds only `demo:change-checkpoints:state`, and “Leave demo and view
+  install steps” clears it before routing to the install section.
+- Added and enforced 15 tested claims. The two new claims prove a normal
+  checkpoint is written in a caller-created Git repository and the signing key
+  is created at `.change-checkpoints/signing.key`.
+- The direct static 404 now matches the page contract: title, canonical,
+  metadata, social metadata, Apple icon, header Install link, and versioned
+  footer. Unknown routes return HTTP 404.
+- Added verb-first catalog description in `.factory/catalog-description.txt`.
+
+## Exact verification evidence
+
+- Fresh GitHub clone: `/tmp/change-checkpoints-clean-MRbQ55` at
+  `9dc8b34a7e72adbc6c27cc8fbd7f0addb43640d5`; `npm ci` passed with 0
+  vulnerabilities. Every one of the 15 commands named in `.factory/claims.json`
+  ran from that clone and passed.
+- Full local gate: `npm test` passed: Rust format + Clippy, 3 Rust unit tests,
+  4 static/claims-contract tests, and 21 Playwright tests. The contract test
+  asserts every claim ID occurs in exactly one executable `@claim:` test tag.
+- Release checks passed: `npm run build`, `npm run pack:cli` (44 files,
+  222.6 KiB unpacked / 66.9 KiB compressed), `npm audit --audit-level=high`,
+  and `git diff --check`.
+- Deployment: `/opt/fleet/lib/deploy-static.sh change-checkpoint-manifest
+  dist/site` completed successfully; Azure deployment id
+  `0859a542-83a7-49da-9648-04aac1e0f0b4`.
+- Cold production checks: `/opt/fleet/lib/verify-url.sh` passed on `/` and
+  `/?demo=1`. `/`, `/demo`, `/privacy`, `/terms`, and `/404.html` return 200;
+  `/does-not-exist` returns 404. Live Playwright + Axe had zero WCAG 2 A/AA
+  violations and no unexpected console errors; all runtime requests were
+  same-origin and no service worker is registered. Evidence is committed in
+  `.factory/evidence/polish-1/`.
+- Live mobile Lighthouse: Performance 100, Accessibility 100, Best Practices
+  100, SEO 100; LCP 1.8 s, CLS 0, 212 KiB transfer.
+
+## Known gaps
+
+None. The expected browser console network message for the intentionally
+requested HTTP-404 URL is documented in `.factory/evidence/polish-1/live-check.json`;
+normal pages have no console errors.
+
+The historical review and verifier records follow.
 
 ## Review 1 — 2026-08-28 UTC
 
