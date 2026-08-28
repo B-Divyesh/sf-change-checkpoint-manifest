@@ -1,1 +1,17 @@
-{"navigationFallback":{"rewrite":"/index.html","exclude":["/404.html","/art/*","/assets/*","/favicon.svg","/robots.txt","/sitemap.xml"]},"globalHeaders":{"X-Content-Type-Options":"nosniff","Referrer-Policy":"strict-origin-when-cross-origin","Content-Security-Policy":"default-src 'self'; img-src 'self'; style-src 'self'; script-src 'self'; connect-src 'self' https://api.sociobot.in; base-uri 'self'; frame-ancestors 'none'; form-action 'self' https://api.sociobot.in"},"responseOverrides":{"404":{"rewrite":"/404.html"}}}
+{
+  "routes": [
+    { "route": "/demo", "rewrite": "/demo/index.html" },
+    { "route": "/privacy", "rewrite": "/privacy/index.html" },
+    { "route": "/terms", "rewrite": "/terms/index.html" },
+    {
+      "route": "/assets/*",
+      "headers": { "Cache-Control": "public, max-age=31536000, immutable" }
+    }
+  ],
+  "globalHeaders": {
+    "X-Content-Type-Options": "nosniff",
+    "Referrer-Policy": "strict-origin-when-cross-origin",
+    "Content-Security-Policy": "default-src 'self'; img-src 'self'; style-src 'self'; script-src 'self'; connect-src 'self'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'"
+  },
+  "responseOverrides": { "404": { "rewrite": "/404.html" } }
+}

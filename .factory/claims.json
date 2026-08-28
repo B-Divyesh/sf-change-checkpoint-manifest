@@ -4,27 +4,90 @@
     "claim": "Demo — sample data, nothing is saved",
     "where": "Demo banner",
     "test": "npm test -- --grep @claim:demo-sandbox",
-    "sandbox": "fresh browser context at /demo; assert the demo namespace and same-origin requests"
+    "sandbox": "fresh browser context at /demo; assert only the demo namespace is used, requests stay same-origin, and leaving clears sample state"
+  },
+  {
+    "id": "web-storage",
+    "claim": "The regular website stores nothing; the demo uses one separate key that is cleared on exit",
+    "where": "Privacy page",
+    "test": "npm test -- --grep @claim:web-storage",
+    "sandbox": "fresh browser context at /demo; assert the exact localStorage key set and that Start for real removes it"
+  },
+  {
+    "id": "checkpoint-record",
+    "claim": "cpc records Git state, check exits, and a rollback note in the repository",
+    "where": "Landing page, privacy page, and README",
+    "test": "npm test -- --grep @claim:checkpoint-record",
+    "sandbox": "fresh temporary repository from cpc demo; inspect the manifest path and recorded fields"
   },
   {
     "id": "signed-manifest",
     "claim": "Ed25519 signs each manifest",
     "where": "Landing facts and README",
     "test": "npm test -- --grep @claim:signed-manifest",
-    "sandbox": "fresh temp directory from cpc demo; inspect the generated manifest"
+    "sandbox": "fresh temporary repository from cpc demo; inspect the signature algorithm and value"
   },
   {
     "id": "no-command-output",
-    "claim": "Stores no command output",
-    "where": "Landing facts and privacy page",
+    "claim": "Stores command exit statuses, not command output",
+    "where": "Landing page, privacy page, and README",
     "test": "npm test -- --grep @claim:no-command-output",
-    "sandbox": "fresh temporary git repository; run a check that writes output and inspect the manifest"
+    "sandbox": "fresh temporary repository; run a check that prints a private marker and assert the manifest omits it"
+  },
+  {
+    "id": "environment-hash",
+    "claim": "Environment values are stored as hashes, not raw values",
+    "where": "Privacy page and README",
+    "test": "npm test -- --grep @claim:environment-hash",
+    "sandbox": "fresh temporary repository; record a known environment value and assert only its SHA-256 appears"
+  },
+  {
+    "id": "local-key-ignore",
+    "claim": "The local signing key is ignored by Git automatically",
+    "where": "README",
+    "test": "npm test -- --grep @claim:local-key-ignore",
+    "sandbox": "fresh cpc demo repository; inspect .change-checkpoints/.gitignore for signing.key"
   },
   {
     "id": "verify-manifest",
-    "claim": "cpc checks the signature, git state, environment assertions, and selected checks",
+    "claim": "cpc checks the signature, Git state, environment assertions, and selected checks",
     "where": "How it works section and README",
     "test": "npm test -- --grep @claim:verify-manifest",
-    "sandbox": "fresh cpc demo temporary repository; run cpc verify --rerun"
+    "sandbox": "fresh cpc demo repository; run cpc verify --rerun and assert a valid result"
+  },
+  {
+    "id": "restore-safe",
+    "claim": "Restore checks current state before showing a rollback note and never runs the note",
+    "where": "Landing page and README",
+    "test": "npm test -- --grep @claim:restore-safe",
+    "sandbox": "fresh cpc demo repository; alter state and assert exit 2 with no note, then restore matching state and assert the source remains changed"
+  },
+  {
+    "id": "optional-patch",
+    "claim": "A patch is written only with --include-diff",
+    "where": "Privacy page and README",
+    "test": "npm test -- --grep @claim:optional-patch",
+    "sandbox": "fresh temporary repository; record checkpoints without and with --include-diff and inspect files"
+  },
+  {
+    "id": "no-third-party-runtime",
+    "claim": "The website has no analytics or third-party runtime assets",
+    "where": "README",
+    "test": "npm test -- --grep @claim:no-third-party-runtime",
+    "sandbox": "fresh browser context; collect all requests across every public route and assert one same origin"
+  },
+  {
+    "id": "git-required",
+    "claim": "Outside a Git repository, cpc exits with an error and writes no manifest",
+    "where": "Demo empty state",
+    "test": "npm test -- --grep @claim:git-required",
+    "sandbox": "fresh non-Git temporary directory; run checkpoint and assert exit 1, actionable error, and no output directory"
+  },
+  {
+    "id": "mit-license",
+    "claim": "Change Checkpoints is open-source software under the MIT License",
+    "where": "Terms page and README",
+    "test": "npm test -- --grep @claim:mit-license",
+    "sandbox": "fresh checkout; assert the shipped LICENSE contains the MIT grant"
   }
 ]

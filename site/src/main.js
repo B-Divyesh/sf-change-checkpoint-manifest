@@ -1,46 +1,121 @@
-import './style.css';
-import './repair.css';
+import "./style.css";
+import "./repair.css";
+import pressUrl from "./assets/checkpoint-press.webp";
+import recordingUrl from "./assets/demo-recording.svg";
 
-const API = 'https://api.sociobot.in/api/v1/products/change-checkpoint-manifest';
-const app = document.querySelector('#app');
-const announce = document.createElement('div');
-announce.className = 'sr-only'; announce.setAttribute('aria-live', 'polite'); document.body.append(announce);
+const app = document.querySelector("#app");
+const announce = document.createElement("div");
+announce.className = "sr-only";
+announce.setAttribute("aria-live", "polite");
+document.body.append(announce);
 const meta = {
-  '/': ['Change Checkpoints — Record checks with each change', 'Record a git change, its checks, and a verified rollback note in one signed local manifest.'],
-  '/demo': ['Demo — Change Checkpoints', 'A safe sample of a signed git checkpoint.'],
-  '/privacy': ['Privacy — Change Checkpoints', 'How Change Checkpoints handles local files and optional licenses.'],
-  '/terms': ['Terms — Change Checkpoints', 'Terms for Change Checkpoints.'],
-  '/404': ['Not found — Change Checkpoints', 'The requested Change Checkpoints page was not found.']
+  "/": [
+    "Change Checkpoints — Record checks with each change",
+    "Record a git change, its checks, and a rollback note in one signed local manifest.",
+  ],
+  "/demo": [
+    "Demo — Change Checkpoints",
+    "A safe sample of a signed git checkpoint.",
+  ],
+  "/privacy": [
+    "Privacy — Change Checkpoints",
+    "How Change Checkpoints handles local files and sample data.",
+  ],
+  "/terms": ["Terms — Change Checkpoints", "Terms for Change Checkpoints."],
+  "/404": [
+    "Not found — Change Checkpoints",
+    "The requested Change Checkpoints page was not found.",
+  ],
 };
-const header = () => `<header class="site-header"><a class="wordmark" href="/" data-route><span aria-hidden="true">●</span> Change Checkpoints</a><nav aria-label="Main navigation"><a href="/demo" data-route>Demo</a><a href="/#install">Install</a><a href="/privacy" data-route>Privacy</a></nav></header>`;
-const footer = () => `<footer><p>Signed context for a change.</p><p><a href="/privacy" data-route>Privacy</a> · <a href="/terms" data-route>Terms</a> · Built by Param Factory · v0.1.0</p></footer>`;
-const shell = content => `${header()}<main id="main" tabindex="-1">${content}</main>${footer()}`;
-const routeLink = (url, label, style = 'button') => `<a class="${style}" href="${url}" data-route>${label}</a>`;
+const header = () =>
+  `<header class="site-header"><a class="wordmark" href="/" data-route><span aria-hidden="true">●</span> Change Checkpoints</a><nav aria-label="Main navigation"><a href="/demo" data-route>Demo</a><a href="/#install">Install</a><a href="/privacy" data-route>Privacy</a></nav></header>`;
+const footer = () =>
+  `<footer><p>Signed context for a change.</p><p><a href="/privacy" data-route>Privacy</a> · <a href="/terms" data-route>Terms</a> · Built by Param Factory · v0.1.0</p></footer>`;
+const shell = (content) =>
+  `${header()}<main id="main" tabindex="-1">${content}</main>${footer()}`;
+const routeLink = (url, label, style = "button") =>
+  `<a class="${style}" href="${url}" data-route>${label}</a>`;
 
-function home() { return shell(`
-<section class="hero" aria-labelledby="hero-title"><div class="hero-copy"><p class="eyebrow">A local git checkpoint tool</p><h1 id="hero-title">Record checks with each change</h1><p class="lede">For teams reviewing fast edits who need the diff, checks, and rollback note together.</p><div class="hero-action">${routeLink('/demo', 'Try it with sample data')}<span>See a signed sample checkpoint next.</span></div><ul class="facts"><li>Runs locally</li><li>Stores no command output</li><li>Ed25519 signs each manifest</li></ul></div><figure class="press"><img src="/art/checkpoint-press.webp" width="1536" height="1024" fetchpriority="high" alt="A printed technical proof sheet with verification stamps on a dark workbench." /><figcaption>One proof sheet for the change and its checks.</figcaption></figure></section>
-<section class="terminal-section" id="install" aria-labelledby="sample-title"><div><p class="eyebrow">The command</p><h2 id="sample-title">Make a checkpoint in one command</h2><p>Choose the checks that matter. Add a rollback note. The command saves only exit statuses.</p><p><code>cargo install change-checkpoints</code></p></div><pre aria-label="Example checkpoint command"><code><span class="prompt">$</span> cpc checkpoint auth-timeout \\
+function home() {
+  return shell(`
+<section class="hero" aria-labelledby="hero-title"><div class="hero-copy"><p class="eyebrow">A local git checkpoint tool</p><h1 id="hero-title">Record checks with each change</h1><p class="lede">For teams reviewing fast edits who need the diff, checks, and rollback note together.</p><div class="hero-action">${routeLink("/demo", "Try it with sample data")}<span>See a signed sample checkpoint next.</span></div><ul class="facts"><li>Runs in your Git repository</li><li>Stores exit status, not output</li><li>Signs manifests with Ed25519</li></ul></div><figure class="press"><img src="${pressUrl}" width="1536" height="1024" fetchpriority="high" alt="A printed technical proof sheet with verification stamps on a dark workbench." /><figcaption>One proof sheet for the change and its checks.</figcaption></figure></section>
+<section class="terminal-section" id="install" aria-labelledby="sample-title"><div><p class="eyebrow">The command</p><h2 id="sample-title">Make a checkpoint in one command</h2><p>Choose the checks that matter. Add a rollback note. The command saves only exit statuses.</p><p><code>cargo install --path .</code></p></div><pre aria-label="Example checkpoint command"><code><span class="prompt">$</span> cpc checkpoint auth-timeout \\
   --check "npm test" \\
   --check "git diff --check" \\
   --rollback "git restore src/auth.rs"</code></pre></section>
-<section class="steps" aria-labelledby="steps-title"><p class="eyebrow">How it works</p><h2 id="steps-title">Keep the proof with the edit</h2><ol><li><strong>Name the checkpoint.</strong><span>cpc reads the current commit and diff fingerprint.</span></li><li><strong>Run the checks.</strong><span>cpc saves each command and its exit status, not its output.</span></li><li><strong>Verify later.</strong><span>cpc checks the signature, git state, environment assertions, and selected checks.</span></li></ol></section>
-<section class="split" aria-labelledby="scope-title"><div><p class="eyebrow">Clear boundary</p><h2 id="scope-title">It keeps context. It does not run a rollback.</h2><p>A checkpoint is a local file. You decide when to execute its rollback note. Do not put secrets in an optional patch file.</p></div><div class="mini-manifest" aria-label="Sample manifest fields"><span>format: change-checkpoints/v1</span><span>signature: ed25519</span><span>checks: 2 passed</span><span>command output: omitted</span></div></section>
-<section class="license" aria-labelledby="license-title"><p class="eyebrow">One-time license</p><h2 id="license-title">Keep the core workflow free.</h2><p>Free records and verifies checkpoints. Pro costs $19 once and adds team manifest templates.</p><div class="license-actions"><a class="button button-quiet" href="${API}/checkout">Buy Pro for $19</a><button class="text-button" id="restore-license">Have a license? Paste it</button></div><form id="license-form" hidden><label for="license-token">License token</label><input id="license-token" name="license" autocomplete="off" /><button class="button" type="submit">Verify license</button></form><p class="license-status" id="license-status" aria-live="polite"></p><p class="fine-print">Sociobot / Dodo is the merchant of record. A refund revokes the license.</p></section>`); }
-
-function demo() { return shell(`
-<aside class="demo-banner" role="status">Demo — sample data, nothing is saved <button id="reset-demo">Reset demo</button> <a href="/#install">Start for real</a></aside><section class="demo-head"><p class="eyebrow">Bundled demo</p><h1>Inspect a sample checkpoint</h1><p class="lede">This sample shows the manifest that cpc writes for a changed checkout.</p></section><section class="demo-grid"><div class="manifest-paper"><div class="paper-top"><span>agent-edit.json</span><span class="pass">SIGNED</span></div><dl><div><dt>Git commit</dt><dd>9d7b1ea…</dd></div><div><dt>Diff fingerprint</dt><dd>3f18a7d6…</dd></div><div><dt>Check</dt><dd><code>git diff --check</code> <b class="pass">exit 0</b></dd></div><div><dt>Check</dt><dd><code>git status --porcelain</code> <b class="pass">exit 0</b></dd></div><div><dt>Rollback note</dt><dd><code>git restore src/lib.rs</code></dd></div></dl><button class="button" id="show-verify">Verify sample state</button><p id="verify-result" aria-live="polite"></p></div><div class="demo-notes"><h2>Try the real command</h2><p>The CLI makes this sample inside a temporary git repository.</p><pre><code>$ cargo run -- demo
-Demo checkpoint created in /tmp/…</code></pre><img class="terminal-recording" src="/art/demo-recording.svg" width="720" height="260" alt="Terminal recording of cpc demo writing a sample checkpoint in a temporary directory." /><a class="link-arrow" href="/#install">Install cpc →</a></div></section><section class="demo-empty"><h2>What happens on an empty checkout?</h2><p>cpc reports that Git is required and exits without writing a manifest. Run it inside a repository.</p></section>`); }
-function legal(kind) { const privacy = kind === 'privacy'; return shell(`<article class="legal"><p class="eyebrow">${privacy ? 'Privacy' : 'Terms'}</p><h1>${privacy ? 'Your checkpoint stays on your machine' : 'Use checkpoints with care'}</h1>${privacy ? `<p>Change Checkpoints is a local command-line tool. It reads Git state, runs only commands you name, and writes manifests in your repository.</p><h2>What it stores</h2><p>Manifests store commands, exit statuses, Git identifiers, fingerprints, environment-value hashes, and your rollback note. They do not store command output.</p><p>An optional patch file can contain source changes. Review it before sharing. Never include secrets.</p><h2>Optional license</h2><p>The website stores a license token and its cached verification result in your browser only. Verification requests go to Sociobot when you buy or restore Pro.</p>` : `<p>Use Change Checkpoints to record engineering context. You remain responsible for reviewing commands, patches, and rollback notes before using them.</p><h2>License</h2><p>Pro is a one-time $19 license for team manifest templates. Sociobot / Dodo is the merchant of record. Refunds follow the checkout terms and revoke the associated license.</p><h2>No warranty</h2><p>The tool is provided as-is. Test rollback steps in a safe checkout before using them on important work.</p>`}</article>`); }
-function missing() { return shell(`<section class="not-found"><p class="eyebrow">404</p><h1>This proof sheet is missing</h1><p>The page address does not point to a checkpoint guide.</p>${routeLink('/', 'Return to Change Checkpoints')}</section>`); }
-function wire(path) {
-  document.querySelectorAll('[data-route]').forEach(a => a.addEventListener('click', e => { if (e.metaKey || e.ctrlKey || a.getAttribute('href').startsWith('/#')) return; e.preventDefault(); history.pushState({}, '', a.getAttribute('href')); render(); requestAnimationFrame(() => document.querySelector('h1')?.focus()); }));
-  if (path === '/demo') { localStorage.setItem('demo:change-checkpoints:state', 'sample'); document.querySelector('#reset-demo').onclick = () => { localStorage.removeItem('demo:change-checkpoints:state'); localStorage.setItem('demo:change-checkpoints:state', 'sample'); document.querySelector('#verify-result').textContent = 'Sample reset.'; }; document.querySelector('#show-verify').onclick = () => document.querySelector('#verify-result').textContent = 'Sample signature and recorded state match.'; }
-  const restore = document.querySelector('#restore-license'), form = document.querySelector('#license-form');
-  if (restore) restore.onclick = () => { form.hidden = !form.hidden; if (!form.hidden) document.querySelector('#license-token').focus(); };
-  if (form) form.onsubmit = e => { e.preventDefault(); const token = new FormData(form).get('license').trim(); if (!token) return status('Paste a license token, then verify it.'); localStorage.setItem('sb_license:change-checkpoint-manifest', token); checkLicense(token); };
-  const given = new URLSearchParams(location.search).get('license'); if (given) { localStorage.setItem('sb_license:change-checkpoint-manifest', given); history.replaceState({}, '', location.pathname); checkLicense(given); } else if (localStorage.getItem('sb_license:change-checkpoint-manifest')) status('License saved. Checking its status in the background.');
+<section class="steps" aria-labelledby="steps-title"><p class="eyebrow">How it works</p><h2 id="steps-title">Keep the proof with the edit</h2><ol><li><strong>Name the checkpoint.</strong><span>cpc records the current commit and diff fingerprint.</span></li><li><strong>Run the checks.</strong><span>cpc saves each command and its exit status, not its output.</span></li><li><strong>Verify later.</strong><span>cpc checks the signature, Git state, environment assertions, and selected checks.</span></li></ol></section>
+<section class="split" aria-labelledby="scope-title"><div><p class="eyebrow">Clear boundary</p><h2 id="scope-title">It keeps context. It does not run a rollback.</h2><p>A checkpoint is a file in your repository. Restore checks the current state before showing its rollback note.</p><p>Do not put secrets in an optional patch file.</p></div><div class="mini-manifest" aria-label="Sample manifest fields"><span>format: change-checkpoints/v1</span><span>signature: ed25519</span><span>checks: 2 passed</span><span>command output: omitted</span></div></section>`);
 }
-function status(text) { const el = document.querySelector('#license-status'); if (el) el.textContent = text; }
-async function checkLicense(token) { const cache = JSON.parse(localStorage.getItem('sb_license_verdict:change-checkpoint-manifest') || 'null'); if (cache && Date.now() - cache.at < 86400000) return status(cache.valid ? 'Pro license active.' : 'License no longer active.'); try { const result = await fetch(`${API}/verify?license=${encodeURIComponent(token)}`).then(r => r.json()); localStorage.setItem('sb_license_verdict:change-checkpoint-manifest', JSON.stringify({valid:result.valid,at:Date.now()})); status(result.valid ? 'Pro license active.' : 'License no longer active.'); } catch { status('License saved. Connect to verify it later.'); } }
-function render() { const path = location.pathname.replace(/\/$/, '') || '/'; app.innerHTML = path === '/' ? home() : path === '/demo' ? demo() : path === '/privacy' ? legal('privacy') : path === '/terms' ? legal('terms') : missing(); const key = meta[path] ? path : '/404'; document.title = meta[key][0]; document.querySelector('meta[name="description"]').content = meta[key][1]; document.querySelector('h1')?.setAttribute('tabindex', '-1'); announce.textContent = `${document.title} loaded`; wire(path); }
-window.addEventListener('popstate', render); render();
+
+function demo() {
+  return shell(`
+<aside class="demo-banner" role="status">Demo — sample data, nothing is saved <button id="reset-demo">Reset demo</button> <a href="/#install" id="start-real">Start for real</a></aside><section class="demo-head"><p class="eyebrow">Bundled demo</p><h1>Inspect a sample checkpoint</h1><p class="lede">This sample shows the manifest that cpc writes for a changed checkout.</p></section><section class="demo-grid"><div class="manifest-paper"><div class="paper-top"><span>agent-edit.json</span><span class="pass">SIGNED</span></div><dl><div><dt>Git commit</dt><dd>9d7b1ea…</dd></div><div><dt>Diff fingerprint</dt><dd>3f18a7d6…</dd></div><div><dt>Check</dt><dd><code>git diff --check</code> <b class="pass">exit 0</b></dd></div><div><dt>Check</dt><dd><code>git status --porcelain</code> <b class="pass">exit 0</b></dd></div><div><dt>Rollback note</dt><dd><code>git restore src/lib.rs</code></dd></div></dl><button class="button" id="show-verify">Verify sample state</button><p id="verify-result" aria-live="polite"></p></div><div class="demo-notes"><h2>Try the real command</h2><p>The CLI makes this sample inside a temporary Git repository.</p><pre><code>$ cargo run -- demo
+Demo checkpoint created in /tmp/…</code></pre><img class="terminal-recording" src="${recordingUrl}" width="720" height="260" alt="Terminal recording of cpc demo writing a sample checkpoint in a temporary directory." /><a class="link-arrow" href="/#install" id="install-cpc">Install cpc →</a></div></section><section class="demo-empty"><h2>What happens outside a Git repository?</h2><p>cpc reports that Git is required and exits without writing a manifest. Run it inside a repository.</p></section>`);
+}
+function legal(kind) {
+  const privacy = kind === "privacy";
+  return shell(
+    `<article class="legal"><p class="eyebrow">${privacy ? "Privacy" : "Terms"}</p><h1>${privacy ? "Your checkpoint stays on your machine" : "Use checkpoints with care"}</h1>${privacy ? `<p>Change Checkpoints reads Git state, runs only commands you name, and writes manifests in your repository.</p><h2>What it stores</h2><p>Manifests store commands, exit statuses, Git identifiers, fingerprints, environment-value hashes, and your rollback note. They do not store command output.</p><p>An optional patch can contain source changes. It is written only when you ask for it. Review it before sharing.</p><h2>Website storage</h2><p>The regular website stores nothing in your browser. The sample demo uses one separate local storage key, which Start for real clears.</p>` : `<p>Use Change Checkpoints to record engineering context. You remain responsible for reviewing commands, patches, and rollback notes before using them.</p><h2>License</h2><p>Change Checkpoints is open-source software under the MIT License.</p><h2>No warranty</h2><p>The tool is provided as-is. Test rollback steps in a safe checkout before using them on important work.</p>`}</article>`,
+  );
+}
+function missing() {
+  return shell(
+    `<section class="not-found"><p class="eyebrow">404</p><h1>This proof sheet is missing</h1><p>The page address does not point to a checkpoint guide.</p>${routeLink("/", "Return to Change Checkpoints")}</section>`,
+  );
+}
+function wire(path) {
+  document.querySelectorAll("[data-route]").forEach((a) =>
+    a.addEventListener("click", (e) => {
+      if (e.metaKey || e.ctrlKey || a.getAttribute("href").startsWith("/#"))
+        return;
+      e.preventDefault();
+      history.pushState({}, "", a.getAttribute("href"));
+      render();
+      requestAnimationFrame(() => document.querySelector("h1")?.focus());
+    }),
+  );
+  if (path === "/demo") {
+    localStorage.setItem("demo:change-checkpoints:state", "sample");
+    document.querySelector("#reset-demo").onclick = () => {
+      localStorage.removeItem("demo:change-checkpoints:state");
+      localStorage.setItem("demo:change-checkpoints:state", "sample");
+      document.querySelector("#verify-result").textContent = "Sample reset.";
+    };
+    document.querySelector("#show-verify").onclick = () =>
+      (document.querySelector("#verify-result").textContent =
+        "Sample signature and recorded state match.");
+    document.querySelector("#start-real").onclick = () =>
+      localStorage.removeItem("demo:change-checkpoints:state");
+  }
+}
+function render() {
+  const path = location.pathname.replace(/\/$/, "") || "/";
+  if (path !== "/demo") {
+    localStorage.removeItem("demo:change-checkpoints:state");
+  }
+  app.innerHTML =
+    path === "/"
+      ? home()
+      : path === "/demo"
+        ? demo()
+        : path === "/privacy"
+          ? legal("privacy")
+          : path === "/terms"
+            ? legal("terms")
+            : missing();
+  const key = meta[path] ? path : "/404";
+  document.title = meta[key][0];
+  document.querySelector('meta[name="description"]').content = meta[key][1];
+  document.querySelector('link[rel="canonical"]').href = new URL(
+    path,
+    "https://change-checkpoint-manifest.sociobot.in",
+  );
+  document.querySelector("h1")?.setAttribute("tabindex", "-1");
+  announce.textContent = `${document.title} loaded`;
+  wire(path);
+}
+window.addEventListener("popstate", () => {
+  render();
+  requestAnimationFrame(() => document.querySelector("h1")?.focus());
+});
+render();
