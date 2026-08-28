@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
 import test from "node:test";
 import { join } from "node:path";
 
@@ -47,4 +47,18 @@ test("hashed Vite assets receive a year-long immutable cache policy", () => {
     assets?.headers?.["Cache-Control"],
     "public, max-age=31536000, immutable",
   );
+  const builtAssets = readdirSync(join(root, "dist", "site", "assets"));
+  assert.ok(
+    builtAssets.some((name) =>
+      /^demo-recording-[A-Za-z0-9_-]+\.svg$/.test(name),
+    ),
+    "the CSP-safe demo image is emitted as a hashed asset",
+  );
+  const builtJavaScript = builtAssets
+    .filter((name) => name.endsWith(".js"))
+    .map((name) =>
+      readFileSync(join(root, "dist", "site", "assets", name), "utf8"),
+    )
+    .join("\n");
+  assert.doesNotMatch(builtJavaScript, /data:image\//);
 });
