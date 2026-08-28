@@ -15,7 +15,7 @@ use std::{
 #[command(
     name = "cpc",
     version,
-    about = "Record portable, signed git checkpoints without command output."
+    about = "Record portable, signed Git checkpoints without command output."
 )]
 struct Cli {
     #[command(subcommand)]
@@ -24,7 +24,7 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Commands {
-    /// Record git state and validation exit statuses.
+    /// Record Git state and validation exit statuses.
     Checkpoint {
         /// A short checkpoint name (letters, numbers, dash, underscore, dot).
         name: String,
@@ -44,7 +44,7 @@ enum Commands {
         #[arg(long)]
         json: bool,
     },
-    /// Verify a manifest signature, current git state, environment assertions, and optionally checks.
+    /// Verify a manifest signature, current Git state, environment assertions, and optionally checks.
     Verify {
         /// JSON manifest path.
         manifest: PathBuf,
@@ -66,7 +66,7 @@ enum Commands {
         #[arg(long)]
         json: bool,
     },
-    /// Run the bundled sample in a temporary git repository.
+    /// Run the bundled sample in a temporary Git repository.
     Demo {
         /// Print a machine-readable result.
         #[arg(long)]
@@ -278,7 +278,7 @@ fn verify(path: &Path, rerun: bool, json: bool) -> Result<u8, String> {
         );
     } else if findings.is_empty() {
         println!(
-            "Verified: signature, git state, environment{} match.",
+            "Verified: signature, Git state, environment{} match.",
             if rerun {
                 ", and check exit statuses"
             } else {
@@ -596,7 +596,7 @@ fn render_markdown(manifest: &Manifest, json_path: &Path) -> String {
         })
         .collect::<Vec<_>>()
         .join("\n");
-    format!("# Change checkpoint: {}\n\n- Git commit: `{}`\n- Branch: `{}`\n- Diff fingerprint: `{}`\n- Signed with: Ed25519\n- JSON manifest: `{}`\n\n## Validation\n\n| Command | Exit | Time | Reproducibility |\n| --- | ---: | ---: | --- |\n{}\n\n## Verify\n\n```sh\ncpc verify {} --rerun\n```\n\n## Roll back\n\nThis is a note only. `cpc` never runs it.\n\n```sh\n{}\n```\n", manifest.name, manifest.repository.head, manifest.repository.branch, manifest.workspace.diff_sha256, json_path.display(), checks, json_path.display(), manifest.rollback)
+    format!("# Change checkpoint: {}\n\n- Git commit: `{}`\n- Branch: `{}`\n- Changes hash: `{}`\n- Signed with: Ed25519\n- JSON manifest: `{}`\n\n## Validation\n\n| Command | Exit | Time | Reproducibility |\n| --- | ---: | ---: | --- |\n{}\n\n## Verify\n\n```sh\ncpc verify {} --rerun\n```\n\n## Roll back\n\nThis is a note only. `cpc` never runs it.\n\n```sh\n{}\n```\n", manifest.name, manifest.repository.head, manifest.repository.branch, manifest.workspace.diff_sha256, json_path.display(), checks, json_path.display(), manifest.rollback)
 }
 fn hash(bytes: &[u8]) -> String {
     format!("{:x}", Sha256::digest(bytes))

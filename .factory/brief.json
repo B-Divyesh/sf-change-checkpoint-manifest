@@ -1,0 +1,31 @@
+{
+  "product": "Change Checkpoints",
+  "artifact_class": "cli",
+  "summary": "A local Git CLI for recording a change, its selected check results, and a rollback note in a signed checkpoint.",
+  "audience": "Teams reviewing rapid developer or coding-agent edits who need review context to travel with the change.",
+  "job_to_be_done": "When a change moves quickly, record the exact Git state, selected checks, and a rollback note so a reviewer can verify that context later without collecting command output or sending data to a service.",
+  "problem": "Review evidence is often scattered across chat, CI logs, and a working tree that has already changed.",
+  "scope": {
+    "must": [
+      "Record signed JSON and Markdown checkpoints inside a caller's Git repository.",
+      "Verify signature, Git state, saved environment assertions, and optional check exits.",
+      "Show a rollback note only after verification and never execute it.",
+      "Provide an isolated bundled CLI and website demo."
+    ],
+    "must_not": [
+      "Upload repository contents, command output, or environment values.",
+      "Run rollback commands automatically.",
+      "Require an account, analytics, a paid tier, or a hosted service."
+    ]
+  },
+  "success_signals": [
+    "A reviewer can create and verify a checkpoint from a fresh Git repository.",
+    "The included demo shows the workflow without touching visitor data.",
+    "The site gives a cold visitor a complete source-to-install path."
+  ],
+  "non_goals": [
+    "Cloud synchronization or team dashboards.",
+    "AI-assisted review, which does not improve this local evidence-recording workflow.",
+    "Replacing CI or Git hosting."
+  ]
+}

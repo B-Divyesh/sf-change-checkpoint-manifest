@@ -103,5 +103,40 @@
     "where": "Terms page and README",
     "test": "npm test -- --grep @claim:mit-license",
     "sandbox": "fresh checkout; assert the shipped LICENSE contains the MIT grant"
+  },
+  {
+    "id": "web-demo-verify",
+    "claim": "The demo checks its displayed sample fields against the bundled sample record",
+    "where": "Demo sample action",
+    "test": "npm test -- --grep @claim:web-demo-verify",
+    "sandbox": "fresh browser demo; check the record, change a displayed field, and assert the check fails"
+  },
+  {
+    "id": "install-from-source",
+    "claim": "You can clone the public source repository and install cpc with Cargo",
+    "where": "Install section and README",
+    "test": "npm test -- --grep @claim:install-from-source",
+    "sandbox": "fresh checkout copy; assert the public source link and displayed clone sequence, then cargo-install from that source into an isolated root"
+  },
+  {
+    "id": "markdown-summary",
+    "claim": "Each checkpoint writes a Markdown summary beside its JSON manifest",
+    "where": "README",
+    "test": "npm test -- --grep @claim:markdown-summary",
+    "sandbox": "fresh temporary Git repository; create a checkpoint and assert the Markdown file and its checkpoint details"
+  },
+  {
+    "id": "cli-demo-isolated",
+    "claim": "The CLI demo creates its sample in a temporary Git repository",
+    "where": "Demo page and README",
+    "test": "npm test -- --grep @claim:cli-demo-isolated",
+    "sandbox": "run cpc demo from a fresh temporary working directory; assert the reported directory is under the OS temp directory, is a Git repository, and contains the sample manifest"
+  },
+  {
+    "id": "runtime-requirements",
+    "claim": "Building and testing Change Checkpoints requires Rust and Node",
+    "where": "README",
+    "test": "npm test -- --grep @claim:runtime-requirements",
+    "sandbox": "fresh checkout; invoke cargo and node version checks and assert the documented npm test script runs both toolchains"
   }
 ]

@@ -4,8 +4,9 @@ Website demo: `?demo=1` or `/demo` (for example,
 `https://change-checkpoint-manifest.sociobot.in/?demo=1`).
 It displays the bundled `agent-edit` sample manifest. It uses only the
 `demo:change-checkpoints:state` localStorage key. **Reset demo** clears and
-reseeds that key. **Leave demo and view install steps** clears it. The demo never reads a
-real-data key.
+reseeds that key. **Leave demo and view install steps** clears it and moves
+focus to the install heading. The sticky banner stays visible while scrolling.
+The demo never reads a real-data key.
 
 CLI demo:
 
@@ -13,7 +14,7 @@ CLI demo:
 cargo run -- demo
 ```
 
-The command creates a temporary git repository with a small Rust source edit,
+The command creates a temporary Git repository with a small Rust source edit,
 runs `git diff --check` and `git status --porcelain`, then writes a signed
 manifest and an opt-in patch. It prints the temporary directory and manifest
 path. Delete that directory to reset it.

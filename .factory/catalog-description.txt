@@ -1,1 +1,1 @@
-Record Git checks and rollback notes in one signed local manifest.
+Record Git checks and rollback notes in a signed local checkpoint.

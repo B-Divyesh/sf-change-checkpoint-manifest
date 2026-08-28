@@ -1,0 +1,40 @@
+{
+  "site/src/main.js": [
+    "checkpoint-record",
+    "runs-in-git-repository",
+    "no-command-output",
+    "signed-manifest",
+    "verify-manifest",
+    "web-demo-verify",
+    "cli-demo-isolated",
+    "git-required",
+    "install-from-source",
+    "restore-safe",
+    "optional-patch",
+    "environment-hash",
+    "web-storage",
+    "mit-license",
+    "demo-sandbox"
+  ],
+  "README.md": [
+    "checkpoint-record",
+    "no-command-output",
+    "signed-manifest",
+    "environment-hash",
+    "optional-patch",
+    "install-from-source",
+    "markdown-summary",
+    "local-signing-key-path",
+    "local-key-ignore",
+    "verify-manifest",
+    "restore-safe",
+    "cli-demo-isolated",
+    "demo-sandbox",
+    "runtime-requirements",
+    "no-third-party-runtime",
+    "web-storage",
+    "mit-license"
+  ],
+  "site/public/404.html": [],
+  "site/index.html": []
+}

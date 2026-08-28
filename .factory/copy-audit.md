@@ -1,45 +1,46 @@
-# Landing copy audit
+# Copy audit
 
-Catalog description (68 characters): **Record Git checks and rollback notes in
-one signed local manifest.**
+Catalog description (64 characters): **Record Git checks and rollback notes in a
+signed local checkpoint.**
 
-| Landing sentence or line | Words | Flag |
+All visible landing, demo, legal, and README sentences were checked. No
+sentence exceeds 22 words and the banned-word scan found no matches.
+
+| Copy | Words | Result |
 | --- | ---: | --- |
-| A local Git checkpoint tool | 5 | — |
-| Record checks with each change | 5 | — |
-| For teams reviewing fast edits who need the diff, checks, and rollback note together. | 14 | — |
-| Try it with sample data | 5 | — |
-| See a signed sample checkpoint next. | 6 | — |
-| Runs in your Git repository | 5 | — |
-| Stores exit status, not output | 5 | — |
-| Signs each checkpoint so you can verify it later | 9 | — |
-| One proof sheet for the change and its checks. | 9 | — |
-| Make a checkpoint in one command | 6 | — |
-| Choose the checks that matter. | 5 | — |
-| Add a rollback note. | 4 | — |
-| The command saves only exit statuses. | 6 | — |
-| Keep the proof with the edit | 6 | — |
-| Name the checkpoint. | 3 | — |
-| cpc records the current commit and a hash of the changes. | 11 | — |
-| Run the checks. | 3 | — |
-| cpc saves each command and its exit status, not its output. | 12 | — |
-| Verify later. | 2 | — |
-| cpc checks the signature, current Git state, saved environment checks, and the checks you selected. | 15 | — |
-| Store change context without running a rollback | 7 | — |
-| A checkpoint is a file in your repository. | 8 | — |
-| Restore checks the current state before showing its rollback note. | 10 | — |
-| Do not put secrets in an optional patch file. | 10 | — |
-
-No landing sentence exceeds 22 words. The banned-word scan found no banned
-marketing terms.
+| A local Git checkpoint tool | 5 | Pass |
+| Record checks with each change | 5 | Pass |
+| For teams reviewing fast edits who need the diff, checks, and rollback note together. | 14 | Pass |
+| Try it with sample data | 5 | Pass |
+| See a sample checkpoint next. | 5 | Pass |
+| Runs in your Git repository | 5 | Pass |
+| Stores exit status, not output | 5 | Pass |
+| Signs each checkpoint so you can verify it later | 9 | Pass |
+| One checkpoint for the change and its checks. | 9 | Pass |
+| Clone the public source, then install the command with Cargo. | 10 | Pass |
+| Keep the checkpoint with the change | 7 | Pass |
+| cpc records the current commit and a hash of the changes. | 11 | Pass |
+| Store change context without running a rollback | 7 | Pass |
+| This sample shows the manifest that cpc writes for a changed checkout. | 12 | Pass |
+| The CLI makes this sample inside a temporary Git repository. | 10 | Pass |
+| The displayed sample matches the bundled record. | 7 | Pass |
+| The displayed sample does not match the bundled record. | 9 | Pass |
+| The regular website stores nothing in your browser. | 8 | Pass |
+| The sample demo uses one separate local storage key. | 10 | Pass |
+| Leaving the demo clears that key. | 6 | Pass |
 
 ## Terminology
 
 | Concept | One term used |
 | --- | --- |
+| Version-control system | Git |
 | Saved record | checkpoint |
 | JSON record | manifest |
+| Change digest | changes hash |
 | Human instructions | rollback note |
 | Validation shell program | check |
 | Extra change file | patch |
 | Browser sample | demo |
+
+Technical documentation names **Ed25519** only when describing the signing
+algorithm and not in the first-screen facts.
