@@ -1,0 +1,14 @@
+{
+  "url": "https://change-checkpoint-manifest.sociobot.in/?demo=1",
+  "loadMs": 588,
+  "errors": [],
+  "a11y": {
+    "title": "Demo — Change Checkpoints",
+    "lang": "en",
+    "h1": 1,
+    "main": true,
+    "imgsMissingAlt": 0,
+    "buttonsUnlabeled": 0,
+    "textLength": 859
+  }
+}
