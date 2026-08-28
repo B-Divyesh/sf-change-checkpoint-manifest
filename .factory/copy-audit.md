@@ -1,6 +1,6 @@
 # Landing copy audit
 
-Catalog description (77 characters): **Record git checks and rollback notes in
+Catalog description (68 characters): **Record Git checks and rollback notes in
 one signed local manifest.**
 
 | Landing sentence or line | Words | Flag |
@@ -12,7 +12,7 @@ one signed local manifest.**
 | See a signed sample checkpoint next. | 6 | — |
 | Runs in your Git repository | 5 | — |
 | Stores exit status, not output | 5 | — |
-| Signs manifests with Ed25519 | 4 | — |
+| Signs each checkpoint so you can verify it later | 9 | — |
 | One proof sheet for the change and its checks. | 9 | — |
 | Make a checkpoint in one command | 6 | — |
 | Choose the checks that matter. | 5 | — |
@@ -20,13 +20,12 @@ one signed local manifest.**
 | The command saves only exit statuses. | 6 | — |
 | Keep the proof with the edit | 6 | — |
 | Name the checkpoint. | 3 | — |
-| cpc records the current commit and diff fingerprint. | 8 | — |
+| cpc records the current commit and a hash of the changes. | 11 | — |
 | Run the checks. | 3 | — |
 | cpc saves each command and its exit status, not its output. | 12 | — |
 | Verify later. | 2 | — |
-| cpc checks the signature, Git state, environment assertions, and selected checks. | 11 | — |
-| It keeps context. | 3 | — |
-| It does not run a rollback. | 6 | — |
+| cpc checks the signature, current Git state, saved environment checks, and the checks you selected. | 15 | — |
+| Store change context without running a rollback | 7 | — |
 | A checkpoint is a file in your repository. | 8 | — |
 | Restore checks the current state before showing its rollback note. | 10 | — |
 | Do not put secrets in an optional patch file. | 10 | — |

@@ -57,8 +57,9 @@ cargo run -- demo
 ```
 
 The demo makes an isolated temporary Git repository, records a changed Rust
-file with two checks, and prints its manifest path. The web version lives at
-`/demo` and stores only `demo:change-checkpoints:state` in the browser.
+file with two checks, and prints its manifest path. The web version opens at
+`/?demo=1` (or `/demo`) and stores only `demo:change-checkpoints:state` in the
+browser. Leave demo and view install steps clears that sample key.
 
 ## Develop, test, and package
 

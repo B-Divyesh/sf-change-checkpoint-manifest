@@ -12,12 +12,12 @@ import {
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-test("@claim:demo-sandbox @claim:web-storage the demo uses isolated storage and clears it on exit", async ({
+test("@claim:demo-sandbox @claim:web-storage the query-string demo uses isolated storage and clears it on exit", async ({
   page,
 }) => {
   const requests = [];
   page.on("request", (request) => requests.push(new URL(request.url()).origin));
-  await page.goto("/demo");
+  await page.goto("/?demo=1");
   await expect(
     page.getByText("Demo — sample data, nothing is saved"),
   ).toBeVisible();
@@ -33,7 +33,9 @@ test("@claim:demo-sandbox @claim:web-storage the demo uses isolated storage and 
     "demo:change-checkpoints:state",
   ]);
   expect([...new Set(requests)]).toEqual(["http://127.0.0.1:4173"]);
-  await page.getByRole("link", { name: "Start for real" }).click();
+  await page
+    .getByRole("link", { name: "Leave demo and view install steps" })
+    .click();
   await expect(page).toHaveURL(/\/#install$/);
   expect(await page.evaluate(() => Object.keys(localStorage))).toEqual([]);
 });
@@ -60,6 +62,78 @@ test("@claim:signed-manifest @claim:checkpoint-record @claim:local-key-ignore cp
       "utf8",
     ),
   ).toBe("signing.key\n");
+});
+
+test("@claim:runs-in-git-repository cpc writes a normal checkpoint below a caller-created Git repository", async () => {
+  const repo = mkdtempSync(join(tmpdir(), "cpc-caller-repo-"));
+  mkdirSync(join(repo, "src"));
+  writeFileSync(join(repo, "src", "a.txt"), "base\n");
+  for (const args of [
+    ["init"],
+    ["config", "user.email", "test@example.invalid"],
+    ["config", "user.name", "Test"],
+    ["add", "."],
+    ["commit", "-m", "base"],
+  ])
+    execFileSync("git", args, { cwd: repo });
+  writeFileSync(join(repo, "src", "a.txt"), "changed\n");
+
+  execFileSync(
+    "cargo",
+    [
+      "run",
+      "--manifest-path",
+      join(process.cwd(), "Cargo.toml"),
+      "--quiet",
+      "--",
+      "checkpoint",
+      "caller-change",
+      "--check",
+      "git diff --check",
+      "--rollback",
+      "git restore src/a.txt",
+    ],
+    { cwd: repo },
+  );
+
+  expect(existsSync(join(repo, ".change-checkpoints", "caller-change.json"))).toBe(
+    true,
+  );
+});
+
+test("@claim:local-signing-key-path cpc creates its signing key at the documented local path", async () => {
+  const repo = mkdtempSync(join(tmpdir(), "cpc-key-path-"));
+  mkdirSync(join(repo, "src"));
+  writeFileSync(join(repo, "src", "a.txt"), "base\n");
+  for (const args of [
+    ["init"],
+    ["config", "user.email", "test@example.invalid"],
+    ["config", "user.name", "Test"],
+    ["add", "."],
+    ["commit", "-m", "base"],
+  ])
+    execFileSync("git", args, { cwd: repo });
+  writeFileSync(join(repo, "src", "a.txt"), "changed\n");
+
+  execFileSync(
+    "cargo",
+    [
+      "run",
+      "--manifest-path",
+      join(process.cwd(), "Cargo.toml"),
+      "--quiet",
+      "--",
+      "checkpoint",
+      "key-path",
+      "--check",
+      "git diff --check",
+      "--rollback",
+      "git restore src/a.txt",
+    ],
+    { cwd: repo },
+  );
+
+  expect(existsSync(join(repo, ".change-checkpoints", "signing.key"))).toBe(true);
 });
 
 test("@claim:verify-manifest cpc verifies the sample state and reruns its checks", async () => {
@@ -313,7 +387,7 @@ test("keyboard paths expose the demo action and visible result", async ({
   await page.goto("/");
   await page.getByRole("link", { name: "Try it with sample data" }).focus();
   await page.keyboard.press("Enter");
-  await expect(page).toHaveURL(/\/demo$/);
+  await expect(page).toHaveURL(/\/?demo=1$/);
   await page
     .getByRole("button", { name: "Verify sample state" })
     .press("Enter");
@@ -350,7 +424,7 @@ test("SPA navigation restores route focus and browser history", async ({
 }) => {
   await page.goto("/");
   await page.getByRole("link", { name: "Demo", exact: true }).click();
-  await expect(page).toHaveURL(/\/demo$/);
+  await expect(page).toHaveURL(/\/?demo=1$/);
   await expect(page.locator("h1")).toBeFocused();
   await page.goBack();
   await expect(page).toHaveURL(/\/$/);
@@ -420,7 +494,20 @@ test("the designed 404 page loads cleanly and returns home by keyboard", async (
   page.on("pageerror", (error) => errors.push(error.message));
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/404.html");
-  await expect(page).toHaveTitle("Page not found — Change Checkpoints");
+  await expect(page).toHaveTitle("Change Checkpoints — Page not found");
+  await expect(page.locator('link[rel="canonical"]')).toHaveAttribute(
+    "href",
+    "https://change-checkpoint-manifest.sociobot.in/404",
+  );
+  await expect(page.locator('link[rel="apple-touch-icon"]')).toHaveCount(1);
+  await expect(page.locator('meta[property="og:title"]')).toHaveAttribute(
+    "content",
+    "Change Checkpoints — Page not found",
+  );
+  await expect(
+    page.getByRole("navigation").getByRole("link", { name: "Install" }),
+  ).toHaveCount(1);
+  await expect(page.locator("footer")).toContainText("v0.1.0");
   await expect(
     page.getByRole("heading", { name: "That checkpoint page is not here" }),
   ).toBeVisible();

@@ -10,7 +10,7 @@
     "build:site": "vite build --config site/vite.config.js && node site/scripts/prerender.mjs",
     "test": "cargo fmt --check && cargo clippy --all-targets -- -D warnings && cargo test && npm run test:deployment-config && playwright test",
     "test:claims": "playwright test --grep @claim",
-    "test:deployment-config": "npm run build:site && node --test tests/staticwebapp-config.test.js",
+    "test:deployment-config": "npm run build:site && node --test tests/staticwebapp-config.test.js tests/claims-contract.test.js",
     "pack:cli": "cargo package --allow-dirty"
   },
   "devDependencies": {

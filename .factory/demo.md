@@ -1,9 +1,10 @@
 # Demo
 
-Website demo: `/demo` or `https://change-checkpoint-manifest.sociobot.in/demo`.
+Website demo: `?demo=1` or `/demo` (for example,
+`https://change-checkpoint-manifest.sociobot.in/?demo=1`).
 It displays the bundled `agent-edit` sample manifest. It uses only the
 `demo:change-checkpoints:state` localStorage key. **Reset demo** clears and
-reseeds that key. **Start for real** clears it. The demo never reads a
+reseeds that key. **Leave demo and view install steps** clears it. The demo never reads a
 real-data key.
 
 CLI demo:

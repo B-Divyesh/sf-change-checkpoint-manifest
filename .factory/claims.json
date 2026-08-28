@@ -4,14 +4,14 @@
     "claim": "Demo — sample data, nothing is saved",
     "where": "Demo banner",
     "test": "npm test -- --grep @claim:demo-sandbox",
-    "sandbox": "fresh browser context at /demo; assert only the demo namespace is used, requests stay same-origin, and leaving clears sample state"
+    "sandbox": "fresh browser context at /?demo=1; assert only the demo namespace is used, requests stay same-origin, and leaving clears sample state"
   },
   {
     "id": "web-storage",
     "claim": "The regular website stores nothing; the demo uses one separate key that is cleared on exit",
     "where": "Privacy page",
     "test": "npm test -- --grep @claim:web-storage",
-    "sandbox": "fresh browser context at /demo; assert the exact localStorage key set and that Start for real removes it"
+    "sandbox": "fresh browser context at /?demo=1; assert the exact localStorage key set and that Leave demo and view install steps removes it"
   },
   {
     "id": "checkpoint-record",
@@ -19,6 +19,20 @@
     "where": "Landing page, privacy page, and README",
     "test": "npm test -- --grep @claim:checkpoint-record",
     "sandbox": "fresh temporary repository from cpc demo; inspect the manifest path and recorded fields"
+  },
+  {
+    "id": "runs-in-git-repository",
+    "claim": "cpc writes a checkpoint in the Git repository where you run it",
+    "where": "README technical details",
+    "test": "npm test -- --grep @claim:runs-in-git-repository",
+    "sandbox": "fresh caller-created Git repository; create a checkpoint and assert its manifest is written below that repository"
+  },
+  {
+    "id": "local-signing-key-path",
+    "claim": "The signing key is stored locally at .change-checkpoints/signing.key",
+    "where": "README",
+    "test": "npm test -- --grep @claim:local-signing-key-path",
+    "sandbox": "fresh caller-created Git repository; create a checkpoint and assert the generated signing key path"
   },
   {
     "id": "signed-manifest",
@@ -50,7 +64,7 @@
   },
   {
     "id": "verify-manifest",
-    "claim": "cpc checks the signature, Git state, environment assertions, and selected checks",
+    "claim": "cpc checks the signature, current Git state, saved environment checks, and selected checks",
     "where": "How it works section and README",
     "test": "npm test -- --grep @claim:verify-manifest",
     "sandbox": "fresh cpc demo repository; run cpc verify --rerun and assert a valid result"
