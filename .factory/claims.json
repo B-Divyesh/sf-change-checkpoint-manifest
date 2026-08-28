@@ -23,7 +23,7 @@
   {
     "id": "runs-in-git-repository",
     "claim": "cpc writes a checkpoint in the Git repository where you run it",
-    "where": "README technical details",
+    "where": "Landing facts and README",
     "test": "npm test -- --grep @claim:runs-in-git-repository",
     "sandbox": "fresh caller-created Git repository; create a checkpoint and assert its manifest is written below that repository"
   },
@@ -37,7 +37,7 @@
   {
     "id": "signed-manifest",
     "claim": "Ed25519 signs each manifest",
-    "where": "Landing facts and README",
+    "where": "README technical details",
     "test": "npm test -- --grep @claim:signed-manifest",
     "sandbox": "fresh temporary repository from cpc demo; inspect the signature algorithm and value"
   },
