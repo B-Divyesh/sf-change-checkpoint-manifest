@@ -19,6 +19,8 @@ All release-blocking and additional findings in verifier report commit
   buttons, and inputs have at least 44 × 44 px targets at 390 px and 1440 px.
 - Vite now fingerprints the hero and demo art. Azure Static Web Apps assigns
   `/assets/*` a one-year immutable cache policy.
+- The build emits the demo SVG as a same-origin hashed file, so the strict image
+  CSP does not block it.
 - `/demo`, `/privacy`, and `/terms` receive physical build entries and explicit
   rewrites. Removing the SPA navigation fallback lets unknown addresses use the
   designed HTTP 404 response.
@@ -38,8 +40,8 @@ Run on 2026-08-28 UTC from `/work/repo`:
 - Formatting/type/lint: `cargo fmt --check` and
   `cargo clippy --all-targets -- -D warnings` — pass inside `npm test`.
 - Production build: `npm run build` — pass; release `cpc` and `dist/site` were
-  produced. Initial JS is 10.36 KB (4.46 KB gzip), CSS is 7.94 KB (2.47 KB
-  gzip), and the hero WebP is 209.50 KB.
+  produced. Initial JS is 9.18 KB (3.62 KB gzip), CSS is 7.94 KB (2.47 KB
+  gzip), the demo SVG is 0.89 KB, and the hero WebP is 209.50 KB.
 - Package: `npm run pack:cli` — pass; 44 files, 222.6 KiB unpacked and 66.9 KiB
   compressed. No registry publish was attempted.
 - Consumer: installed `target/package/change-checkpoints-0.1.0` to a fresh
@@ -65,9 +67,28 @@ Run on 2026-08-28 UTC from `/work/repo`:
 
 ## Deployment and live evidence
 
-Pending the production upload. Record the deployed commit, live response
-policy, route status, immutable asset cache, browser smoke test, and artifact
-identity here immediately after deployment.
+- Repair commits `69929a7` and `75931dd` were pushed to `origin/main`.
+- `swa deploy dist/site --swa-config-location dist/site --app-name
+  sf-change-checkpoint-manifest --resource-group sociobot --env production`
+  deployed successfully to the existing Azure Static Web App. The CLI-created
+  local `.env` credentials file was removed immediately and was never committed.
+- The deployment is live at
+  `https://change-checkpoint-manifest.sociobot.in`. `/`, `/demo`, `/privacy`,
+  and `/terms` return 200. `/not-a-real-route` returns 404 with the designed
+  missing-page document.
+- Live HTML and assets send HSTS, `nosniff`, strict-origin referrer policy, and
+  the restrictive self-only CSP. Hashed JS, CSS, WebP, and SVG assets return
+  `Cache-Control: public, max-age=31536000, immutable`.
+- `/opt/fleet/lib/verify-url.sh` passed in 782 ms with the expected title,
+  `lang=en`, one `<h1>`, one `<main>`, complete alt text, and no console errors.
+- Live Chromium checks at 1440 × 900 and 390 × 844 passed on every route:
+  correct status/title/landmarks, no overflow, no sub-44 px visible targets,
+  same-origin requests only, expected demo-only storage, no console errors, and
+  zero serious/critical Axe findings. The live 404 also had zero Axe findings.
+- SHA-256 comparison matched all 12 public local build files to production.
+- Live mobile Lighthouse: Performance 100, Accessibility 100, Best Practices
+  100, SEO 100, LCP 1.8 s, CLS 0, transfer 212 KiB. INP was not measured because
+  the synthetic load had no user interaction.
 
 ## Known boundaries
 
