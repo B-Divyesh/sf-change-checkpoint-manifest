@@ -1,14 +1,83 @@
 # Change Checkpoints
 
-Live: https://change-checkpoint-manifest.sociobot.in — built by the Param Factory (`cli`).
+Record a git change, its checks, and a rollback note in one signed manifest.
+It is for teams reviewing rapid agent or developer edits.
 
-See `.factory/brief.json` for the researched problem this solves and `.factory/design.md` for the visual system.
+The CLI records Git state and each selected command's exit status. It does not
+save command output. An optional patch is written only when you ask for it.
 
-## Develop
+Live docs: https://change-checkpoint-manifest.sociobot.in
 
+## Install
+
+```sh
+cargo install change-checkpoints
 ```
+
+Until the crate is published, build from a clone:
+
+```sh
+cargo build --release
+./target/release/cpc --help
+```
+
+## Record a checkpoint
+
+Run this inside a Git repository.
+
+```sh
+cpc checkpoint auth-timeout \
+  --check "npm test" \
+  --check "git diff --check" \
+  --env NODE_ENV=production \
+  --rollback "git restore src/auth.rs"
+```
+
+This writes `.change-checkpoints/auth-timeout.json` and a readable Markdown
+summary. The JSON is signed with an Ed25519 key stored locally at
+`.change-checkpoints/signing.key`. The public key travels with each manifest,
+so another checkout can verify it.
+
+The command adds a local `.change-checkpoints/.gitignore` entry for that key.
+
+Add `--include-diff` when you need a patch next to the manifest. Review that
+patch before sharing it. A diff may contain secrets.
+
+Verify the current checkout later:
+
+```sh
+cpc verify .change-checkpoints/auth-timeout.json --rerun
+cpc restore .change-checkpoints/auth-timeout.json
+```
+
+`restore` verifies the manifest then prints its rollback note. It never changes
+your files. Commands that mention networking, containers, SSH, or time are
+marked environment-dependent in the manifest.
+
+## Try the bundled sample
+
+```sh
+cargo run -- demo
+```
+
+The demo makes an isolated temporary Git repository, records a changed Rust
+file with two checks, and prints its manifest path. The web version lives at
+`/demo` and stores only `demo:change-checkpoints:state` in the browser.
+
+## Develop, test, and package
+
+Requires Rust 1.74+ and Node 20+.
+
+```sh
 npm install
-npm run dev
 npm test
-npm run build   # -> dist/
+npm run build       # release binary + static site in dist/site
+npm run pack:cli    # validates the publishable Cargo package; does not publish
 ```
+
+To preview the site, use `npm run dev`. The site has `/demo`, `/privacy`, and
+`/terms` routes. It contains no analytics or third-party runtime assets.
+
+## License
+
+MIT. See [LICENSE](LICENSE).
