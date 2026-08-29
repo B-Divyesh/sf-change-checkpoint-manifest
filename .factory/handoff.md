@@ -117,7 +117,8 @@ succeeded at `https://change-checkpoint-manifest.sociobot.in`.
   zero undersized visible controls, no overflow, no console errors, and only
   the product origin in the request log. Keyboard activation focuses the demo
   h1. No service worker is registered.
-- The footer exposes `Build 51fbbf6bbf2d`, matching the deployed Git commit.
+- That evidence deployment exposed `Build 51fbbf6bbf2d`, matching its Git
+  commit. Later docs-only deployments derive and expose their own HEAD.
 - Live Lighthouse: Performance 100, Accessibility 100, Best Practices 100,
   SEO 100; FCP 0.8 s, LCP 1.8 s, TBT 0 ms, CLS 0.
 - Local and live SHA-256 values match for every HTML route and hashed asset.
