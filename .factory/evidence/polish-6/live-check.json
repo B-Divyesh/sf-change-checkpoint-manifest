@@ -1,0 +1,47 @@
+{
+  "checked_at": "2026-08-29T11:46:03Z",
+  "origin": "https://change-checkpoint-manifest.sociobot.in",
+  "artifact_commit": "d8d3ea70e00ebc67cb434fa280163a71d116200d",
+  "routes": {
+    "/": { "status": 200, "title": "Change Checkpoints — Record checks with each change", "h1": "Record checks with each change", "axe_wcag_a_aa_violations": 0 },
+    "/demo": { "status": 200, "title": "Demo — Change Checkpoints", "h1": "Inspect a sample checkpoint", "axe_wcag_a_aa_violations": 0 },
+    "/privacy": { "status": 200, "title": "Privacy — Change Checkpoints", "h1": "See what Change Checkpoints stores", "axe_wcag_a_aa_violations": 0 },
+    "/terms": { "status": 200, "title": "Terms — Change Checkpoints", "h1": "Terms for Change Checkpoints", "axe_wcag_a_aa_violations": 0 },
+    "/404.html": { "status": 200, "title": "Change Checkpoints — Page not found", "h1": "That checkpoint page is not here", "axe_wcag_a_aa_violations": 0 },
+    "/polish-6-missing": { "status": 404, "title": "Change Checkpoints — Page not found", "h1": "That checkpoint page is not here", "axe_wcag_a_aa_violations": 0 }
+  },
+  "runtime": {
+    "same_origin_requests_only": true,
+    "unexpected_console_errors_on_200_pages": [],
+    "mobile_horizontal_overflow": false,
+    "reduced_motion": { "scroll_behavior": "auto", "illustration_transform": "none" }
+  },
+  "demo": {
+    "entry": "/?demo=1",
+    "sample_check": "The displayed sample matches the bundled record.",
+    "tamper_check": "The displayed sample does not match the bundled record.",
+    "banner_top_after_scroll_px": 0,
+    "demo_key_after_exit": null,
+    "real_sentinel_after_exit": "untouched",
+    "exit_focus": "sample-title",
+    "exit_announcement": "Install steps loaded",
+    "back_focus": "Inspect a sample checkpoint",
+    "forward_focus": "sample-title"
+  },
+  "desktop_first_screen_bottom_px": {
+    "headline": 417,
+    "primary_action": 573,
+    "result_caption": 567,
+    "repository_fact": 617,
+    "output_fact": 617,
+    "free_account_fact": 658
+  },
+  "lighthouse": {
+    "performance": 100,
+    "accessibility": 100,
+    "fcp": "0.8 s",
+    "lcp": "1.8 s",
+    "cls": "0",
+    "tbt": "0 ms"
+  }
+}

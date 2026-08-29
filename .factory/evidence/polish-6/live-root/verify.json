@@ -1,0 +1,14 @@
+{
+  "url": "https://change-checkpoint-manifest.sociobot.in/",
+  "loadMs": 600,
+  "errors": [],
+  "a11y": {
+    "title": "Change Checkpoints — Record checks with each change",
+    "lang": "en",
+    "h1": 1,
+    "main": true,
+    "imgsMissingAlt": 0,
+    "buttonsUnlabeled": 0,
+    "textLength": 1576
+  }
+}
