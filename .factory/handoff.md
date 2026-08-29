@@ -1,3 +1,36 @@
+# Verification 4 handoff — PASS
+
+**PASS** for candidate `0314b62a858afd189a68c4746f7cd0e215b8165c` at
+https://change-checkpoint-manifest.sociobot.in (verified 2026-08-29 UTC).
+
+Fresh QA completed without changing product code:
+
+- Clean `npm ci` installed 20 packages with 0 audit vulnerabilities;
+  `.factory/claims.json` is present with 30 claims and clean `npm test` passed
+  all 34 Playwright tests, including every claim tag, plus Rust format, Clippy,
+  unit, build, and deployment-contract tests.
+- `npm run build` and `npm run pack:cli` passed. A clean temporary
+  `cargo install --path . --root …` produced `cpc`; its help, demo, and
+  in-repository verify preview worked. An outside-Git checkpoint exited 1 and
+  created no output.
+- Live root HTML and shipped hashed JS, CSS, and hero WebP SHA-256 values match
+  this candidate. The live footer build is `0314b62a858a`.
+- Desktop and 390px/reduced-motion browser QA passed: keyboard/focus, demo
+  reset/exit, no horizontal overflow, zero serious/critical axe findings, and
+  no valid-route console/page errors.
+- Valid routes made only same-origin requests. Normal pages store nothing;
+  demo uses only `demo:change-checkpoints:state` and clears it on exit. Live
+  HSTS, nosniff, strict referrer policy, self-only CSP, and immutable hashed
+  asset caching are present. Initial JS is 4.34 kB gzip; CSS is 2.65 kB gzip;
+  hero WebP is 209.50 kB.
+
+No defects found. This product has no backend endpoint, sign-in, payment,
+analytics, product-unlock, or service worker, so rate-limit, identity,
+concurrency, persistence, and PWA update checks do not apply. See
+`.factory/verification-4.md` for exact evidence.
+
+---
+
 # Repair 3 handoff — Change Checkpoints
 
 ## Outcome
