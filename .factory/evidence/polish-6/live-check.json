@@ -1,7 +1,8 @@
 {
-  "checked_at": "2026-08-29T11:46:03Z",
+  "checked_at": "2026-08-29T11:51:06Z",
   "origin": "https://change-checkpoint-manifest.sociobot.in",
   "artifact_commit": "d8d3ea70e00ebc67cb434fa280163a71d116200d",
+  "footer_build_id": "d8d3ea70e00e",
   "routes": {
     "/": { "status": 200, "title": "Change Checkpoints — Record checks with each change", "h1": "Record checks with each change", "axe_wcag_a_aa_violations": 0 },
     "/demo": { "status": 200, "title": "Demo — Change Checkpoints", "h1": "Inspect a sample checkpoint", "axe_wcag_a_aa_violations": 0 },
