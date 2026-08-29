@@ -1,7 +1,7 @@
 # Copy audit — repair 3
 
-Catalog description (83 characters): **Record Git changes, check results, and
-rollback notes in trusted local checkpoints.** It begins with a verb and stays
+Catalog description (69 characters): **Record Git changes, check results, and
+rollback notes in local checkpoints.** It begins with a verb and stays
 below the 120-character limit.
 
 Every visitor-facing source was reviewed after the checkpoint safety repair.
@@ -59,6 +59,8 @@ promise and the decorative “Clear boundary” label are absent.
 ## Other public copy
 
 Demo, Privacy, Terms, 404, and README prose were checked with the same rules.
+The Terms page heading is “Terms for Change Checkpoints” (4 words), so heading
+navigation names the legal page directly.
 New safety and JSON-mode sentences contain no more than 12 words. The
 sentence-level claim map in `.factory/public-claims.json` pins reviewed source
 digests, so a public-copy change fails the contract test until it is reviewed.

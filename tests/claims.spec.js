@@ -867,6 +867,13 @@ test("SPA navigation restores route focus and browser history", async ({
   await expect(page.locator("h1")).toBeFocused();
 });
 
+test("Terms route heading names the legal page", async ({ page }) => {
+  await page.goto("/terms");
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText(
+    "Terms for Change Checkpoints",
+  );
+});
+
 test("leaving the demo moves keyboard focus to the install heading", async ({ page }) => {
   await page.goto("/?demo=1");
   await page.getByRole("link", { name: "Leave demo and view install steps" }).click();

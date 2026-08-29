@@ -2,7 +2,7 @@
   "version": 2,
   "reviewed_sources": {
     "README.md": "648cd553784ebdbd51af740386ee3a03aa31eadd284ae15b9145b0f0daea450e",
-    "site/src/main.js": "bb9db60febcc73892038622f8c074d2aa9c5724ac40e39788b46c1741fe1e9d4",
+    "site/src/main.js": "688b8531478676924522f9ab49ec0ee671f4b84893b3f85195772a434787181a",
     "site/public/404.html": "75771bac1c0460857a9f05b40b3a2eaee3189dfb9e970a8dcba20d89603edb73",
     "site/index.html": "d5b6b05b5dbb13c6d7c4e61243d5234c852b6e7c46c805be9eee60ecd2eeb39a"
   },

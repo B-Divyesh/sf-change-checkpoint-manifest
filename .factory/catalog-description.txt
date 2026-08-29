@@ -1,1 +1,1 @@
-Record Git changes, check results, and rollback notes in trusted local checkpoints.
+Record Git changes, check results, and rollback notes in local checkpoints.
