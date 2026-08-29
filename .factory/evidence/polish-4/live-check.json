@@ -1,0 +1,52 @@
+{
+  "checked_at": "2026-08-29T08:21:27.458Z",
+  "origin": "https://change-checkpoint-manifest.sociobot.in",
+  "raw_metadata": {
+    "/demo": { "status": 200, "title": "Demo — Change Checkpoints", "canonical": "https://change-checkpoint-manifest.sociobot.in/demo" },
+    "/privacy": { "status": 200, "title": "Privacy — Change Checkpoints", "canonical": "https://change-checkpoint-manifest.sociobot.in/privacy" },
+    "/terms": { "status": 200, "title": "Terms — Change Checkpoints", "canonical": "https://change-checkpoint-manifest.sociobot.in/terms" }
+  },
+  "page_checks": {
+    "routes": ["/", "/demo", "/privacy", "/terms", "/missing-polish-four"],
+    "status": [200, 200, 200, 200, 404],
+    "one_h1_and_main_each": true,
+    "route_titles_and_canonicals": true,
+    "mobile_overflow": false,
+    "undersized_controls": [],
+    "axe_wcag_a_aa_violations": 0,
+    "unexpected_console_errors": [],
+    "service_workers": 0
+  },
+  "crawl_and_headers": {
+    "all_internal_and_github_links_acceptable": true,
+    "content_security_policy": "self-only runtime sources; frame-ancestors none",
+    "x_content_type_options": "nosniff",
+    "referrer_policy": "strict-origin-when-cross-origin",
+    "hashed_javascript_cache": "public, max-age=31536000, immutable"
+  },
+  "demo": {
+    "entry": "/?demo=1",
+    "valid_result": "The displayed sample matches the bundled record.",
+    "tampered_result": "The displayed sample does not match the bundled record.",
+    "banner_top_px_after_scroll": 0,
+    "banner_height_px_mobile": 94.328125,
+    "request_origins": ["https://change-checkpoint-manifest.sociobot.in"],
+    "real_sentinel_after_reset_and_exit": "untouched",
+    "demo_key_after_exit": null,
+    "exit_focus": "sample-title",
+    "exit_announcement": "Install steps loaded",
+    "back_focus": "Inspect a sample checkpoint",
+    "forward_focus": "sample-title",
+    "forward_target_visible": true,
+    "forward_announcement": "Install steps loaded"
+  },
+  "desktop_first_screen_bottom_px": {
+    "headline": 417,
+    "primary_action": 573,
+    "result_caption": 567,
+    "repository_fact": 617,
+    "output_fact": 617,
+    "price_account_fact": 658
+  },
+  "reduced_motion": { "scroll_behavior": "auto", "illustration_transform": "none" }
+}
