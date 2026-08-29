@@ -103,6 +103,27 @@ Fresh clone: `/tmp/cpc-clean-validation-HkDUtF/repo` at
 Evidence is under `.factory/evidence/repair-3/`, including desktop/mobile route
 captures, verifier JSON, and the Lighthouse JSON report.
 
+## Live deployment evidence
+
+Azure Static Web Apps deployment `4f542060-0373-4cde-a36a-d9c794355a62`
+succeeded at `https://change-checkpoint-manifest.sociobot.in`.
+
+- `/`, `/demo`, `/privacy`, and `/terms` return HTTP 200. The verifier reports
+  correct title/lang/h1/main/alt structure and no console or page errors.
+- An unknown route returns HTTP 404 with the designed page.
+- HSTS, the strict self-only CSP, `nosniff`, and strict-origin referrer policy
+  are present. The deployed hashed JS has one-year immutable caching.
+- Live Playwright/Axe checks at 1440×900 and 390×844 report zero violations,
+  zero undersized visible controls, no overflow, no console errors, and only
+  the product origin in the request log. Keyboard activation focuses the demo
+  h1. No service worker is registered.
+- The footer exposes `Build 51fbbf6bbf2d`, matching the deployed Git commit.
+- Live Lighthouse: Performance 100, Accessibility 100, Best Practices 100,
+  SEO 100; FCP 0.8 s, LCP 1.8 s, TBT 0 ms, CLS 0.
+- Local and live SHA-256 values match for every HTML route and hashed asset.
+  Root HTML is `2509d13a4a4a12def1a4e0397b4ade98503956889b3f618dd841d5f8f9541cd9`;
+  demo HTML is `2b4868d5e7492f917f3915fc2747cd5d5318df21e9be348068f925a5bc438424`.
+
 ## Deployment and operations
 
 Build the site with `npm run build` and deploy `dist/site` with:
