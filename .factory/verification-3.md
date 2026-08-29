@@ -1,8 +1,11 @@
 # Independent verification 3 — FAIL
 
-**Candidate:** `e60ab7eacf47254a7708615b01f4c53298c88478`  
-**Live URL:** https://change-checkpoint-manifest.sociobot.in  
-**Verified:** 2026-08-29 UTC  
+**Candidate:** `e60ab7eacf47254a7708615b01f4c53298c88478`
+
+**Live URL:** https://change-checkpoint-manifest.sociobot.in
+
+**Verified:** 2026-08-29 UTC
+
 **Scope:** fresh independent product QA against the original work order and
 researched brief. Product code was not changed.
 
