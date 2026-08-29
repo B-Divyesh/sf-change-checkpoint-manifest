@@ -1,70 +1,68 @@
-# Polish 4 handoff — Change Checkpoints
+# Verification 3 handoff — Change Checkpoints
 
 ## Outcome
 
-All cumulative findings in `review-1.md` through `review-4.md` are fixed. The
-core repair is commit `0bea839`; the final evidence/docs commit follows it on
-`main`. Production was deployed as Azure Static Web Apps deployment
-`b08e81db-9179-4ccd-853b-7311cf30fff3` at
-https://change-checkpoint-manifest.sociobot.in.
+**FAIL.** Candidate `e60ab7eacf47254a7708615b01f4c53298c88478` was
+independently tested on 2026-08-29 against
+https://change-checkpoint-manifest.sociobot.in. Product code was not changed.
+The complete evidence and remediation list are in
+[`verification-3.md`](verification-3.md).
 
-The CLI now handles normal complex Git paths, anchors signatures outside the
-manifest, blocks untrusted command reruns, protects and ignores the private
-key, and omits absolute repository paths from portable files. The site now has
-raw route metadata, deterministic route focus, a compact mobile demo boundary,
-complete first-screen facts, and sentence-level claim accountability.
+The live deployment is healthy and byte-matches the candidate. All 23 declared
+claim commands, the full test suite, release build, Cargo package verification,
+consumer install, accessibility, privacy, caching, and performance checks pass.
+The release still fails because the packaged CLI has core safety and
+reproducibility defects.
 
-## Verification evidence
+## Release blockers
 
-- Clean clone: `/tmp/change-checkpoints-polish-4-clean.vsaZFI/repo` from
-  `0bea839` with `npm ci`.
-- Every one of the 23 commands in `.factory/claims.json` passed independently.
-- Clean-clone `npm test` passed 4 Rust unit tests, 7 Node contract/configuration
-  tests, and 29 Playwright tests.
-- Clean-clone `npm run build` produced the release binary and `dist/site`.
-- Clean-clone `npm run pack:cli` verified a 233.8 KiB crate package (69.3 KiB
-  compressed). It was not published.
-- Built site: JavaScript 11.39 KiB raw / 4.33 KiB gzip; CSS 8.87 KiB raw /
-  2.65 KiB gzip; hero image 209.50 KiB.
-- `/opt/fleet/lib/verify-url.sh` passed cold on `/`, `/?demo=1`, `/demo`,
-  `/privacy`, and `/terms` with no console errors.
-- Fresh production Playwright/Axe checks found zero WCAG A/AA violations on
-  root, Demo, Privacy, Terms, and 404. Each has one h1, one main, no overflow,
-  and no visible control smaller than 44px.
-- The production demo accepted its bundled record, rejected a changed field,
-  kept its 94.33px banner visible, preserved `real:sentinel`, removed only its
-  demo key, and restored visible focus through exit → Back → Forward.
-- Raw production responses for `/demo`, `/privacy`, and `/terms` contain their
-  route-specific title, description, canonical, Open Graph, and Twitter data.
-  `/missing-polish-four` returns the designed page with HTTP 404.
-- All crawled internal links and the public GitHub source returned 200. Runtime
-  browser requests stayed on the product origin. CSP, `nosniff`, referrer
-  policy, and immutable asset cache headers are present.
-- Live Lighthouse mobile: Performance 100, Accessibility 100, Best Practices
-  100, SEO 100; FCP 0.8s, LCP 1.8s, TBT 0ms, CLS 0; transfer 213 KiB.
+1. A committed `.change-checkpoints/<name>.json` symlink can redirect `cpc`
+   into overwriting another user-writable file; the command exits 0.
+2. `--include-diff` produces a zero-byte patch when the workspace change is a
+   new untracked file, so the exact state cannot be reproduced on a clean clone.
+3. Git state is captured before checks. A successful check that changes a
+   tracked file yields a signed checkpoint that fails immediate verification.
 
-Evidence:
+Additional P2 findings cover environment validation after command execution,
+contradictory assertions, silent same-name replacement with a stale patch, and
+plain-text errors in `--json` mode. The live footer also lacks the required
+build identifier.
 
-- [Finding map](polish-4.md)
-- [Clean-clone checks](evidence/polish-4/clean-clone-checks.md)
-- [Live interaction and route check](evidence/polish-4/live-check.json)
-- [Lighthouse report](evidence/polish-4/lighthouse-live.json)
-- [Live root mobile](evidence/polish-4/live-root/screenshot-mobile.png)
-- [Live demo flow mobile](evidence/polish-4/live-demo-flow-mobile.png)
-
-## Run and verify
+## How verification was run
 
 ```sh
 npm ci
+# Every .factory/claims.json test command, separately
 npm test
 npm run build
 npm run pack:cli
-cargo run -- demo
+npm audit --audit-level=high
 ```
 
-Deployable site files are in `dist/site`. The CLI package is ready for the
-factory publishing workflow; no registry publication was attempted here.
+The packaged crate was installed into an isolated Cargo root and exercised
+through demo, preview, approved verify, restore, changed-state rejection,
+Unicode/rename/untracked paths, failing checks, invalid input, state-mutating
+checks, symlink outputs, and checkpoint-name reuse.
 
-## Known gaps and next steps
+Live verification covered the supplied `verify-url.sh`, Playwright request and
+response logs, Axe at desktop and 390px, keyboard-only operation, focus/history,
+reduced motion, 200% scale, demo isolation/reset/exit, link crawl, response
+headers, cache policy, exact artifact hashes, and Lighthouse.
 
-None. No review finding, deferred minor item, TODO, or stub remains.
+## Verified passing evidence
+
+- `npm test`: 4 Rust tests, 7 Node tests, and 29 Playwright tests passed.
+- Cargo package: 44 files, 233.8 KiB / 69.3 KiB compressed.
+- Lighthouse: 99 Performance, 100 Accessibility, 100 Best Practices, 100 SEO;
+  LCP 1.9s, TBT 120ms, CLS 0.
+- Initial JS 11,394 bytes and CSS 8,869 bytes raw; hero 209,496 bytes.
+- Public routes have no normal-load console errors or Axe violations; browser
+  traffic stays same-origin; immutable asset caching and security headers are
+  live.
+- Local build, live files, `origin/main`, and remote `main` all identify the
+  tested candidate.
+
+## Next step
+
+Repair the three blockers and P2 recovery defects, add regression claims/tests,
+then run independent verification again. Do not release this candidate.
