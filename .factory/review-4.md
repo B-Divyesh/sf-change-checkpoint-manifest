@@ -155,12 +155,13 @@ the `popstate` listener.
 
 After **Leave demo and view install steps**, direct focus correctly reaches
 “Clone and install cpc.” Back correctly restores the demo and focuses its h1.
-Forward restores `/#install` and scrolls the install section to the viewport,
-but the active element is the off-screen “Record checks with each change” h1.
-The listener always focuses the h1 and does not handle the restored hash target.
+Forward restores `/#install`, but returns near the top of the landing page;
+the install section is still far below the viewport and the active element is
+the off-screen “Record checks with each change” h1. The listener always
+focuses the h1 and does not handle the restored hash target.
 
-The address, visible section, and screen-reader focus disagree on a required
-back/forward route. This is broken route-state restoration.
+The address says `#install` while both the visible section and screen-reader
+focus are back at the hero. This is broken route-state restoration.
 
 **Concrete fix:** centralize route focus. On `/#install`, focus
 `#sample-title`; on page routes, focus the h1; then announce the visible
