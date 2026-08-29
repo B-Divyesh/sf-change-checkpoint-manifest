@@ -102,11 +102,11 @@ function wire(isDemo) {
       localStorage.setItem("demo:change-checkpoints:state", "sample");
       document.querySelector("#verify-result").textContent = "Sample reset.";
     };
-    document.querySelector("#show-verify").onclick = async () => {
+    document.querySelector("#show-verify").onclick = () => {
       const fields = ["name", "commit", "hash", "check-one", "check-one-status", "check-two", "check-two-status", "rollback"];
       const record = fields.map((field) => document.querySelector(`[data-field="${field}"]`).textContent.trim()).join("|");
-      const digest = Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(record))), (byte) => byte.toString(16).padStart(2, "0")).join("");
-      document.querySelector("#verify-result").textContent = digest === "d1bf3e25061e83b618d351ff1a1f01533862fb4c9337ad482bd29300f0432e01" ? "The displayed sample matches the bundled record." : "The displayed sample does not match the bundled record.";
+      const bundledRecord = "agent-edit.json|9d7b1ea…|3f18a7d6…|git diff --check|exit 0|git status --porcelain|exit 0|git restore src/lib.rs";
+      document.querySelector("#verify-result").textContent = record === bundledRecord ? "The displayed sample matches the bundled record." : "The displayed sample does not match the bundled record.";
     };
     document.querySelector("#leave-demo").addEventListener("click", () => {
       localStorage.removeItem("demo:change-checkpoints:state");

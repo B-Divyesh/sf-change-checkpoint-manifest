@@ -167,12 +167,15 @@ fn main() -> ExitCode {
     let cli = match Cli::try_parse() {
         Ok(cli) => cli,
         Err(error) => {
-            if json_requested {
+            let exit_code = error.exit_code();
+            if exit_code == 0 {
+                let _ = error.print();
+            } else if json_requested {
                 print_json_error("invalid_arguments", &error.to_string());
             } else {
                 let _ = error.print();
             }
-            return ExitCode::from(2);
+            return ExitCode::from(u8::try_from(exit_code).unwrap_or(2));
         }
     };
     let json_requested = cli.json_requested();
@@ -288,8 +291,6 @@ fn checkpoint(
     }
     let env_assertions = parse_environment_inputs(environment)?;
     let root = git_root()?;
-    let head = git(&root, ["rev-parse", "HEAD"])?;
-    let branch = git(&root, ["branch", "--show-current"]).unwrap_or_else(|_| "DETACHED".into());
     let directory = prepare_checkpoint_directory(&root)?;
     let json_path = directory.join(format!("{name}.json"));
     let markdown_path = directory.join(format!("{name}.md"));
@@ -300,6 +301,8 @@ fn checkpoint(
         .iter()
         .map(|command| run_check(&root, command))
         .collect::<Vec<_>>();
+    let head = git(&root, ["rev-parse", "HEAD"])?;
+    let branch = current_branch(&root)?;
     let snapshot = capture_stable_workspace(&root, include_diff)?;
     let patch = if include_diff {
         let bytes = snapshot
@@ -461,14 +464,7 @@ fn verification_findings(
     if !findings.is_empty() {
         return Ok(findings);
     }
-    let head = git(&root, ["rev-parse", "HEAD"])?;
-    if head.trim() != manifest.repository.head {
-        findings.push(format!(
-            "HEAD differs (recorded {}, found {})",
-            manifest.repository.head,
-            head.trim()
-        ));
-    }
+    append_repository_findings(&root, manifest, &mut findings)?;
     append_workspace_findings(&root, manifest, &mut findings)?;
     append_patch_artifact_findings(&root, manifest, &mut findings);
     for assertion in &manifest.environment {
@@ -486,10 +482,39 @@ fn verification_findings(
                 findings.push(format!("check exit differs: {}", check.command));
             }
         }
+        append_repository_findings(&root, manifest, &mut findings)?;
         append_workspace_findings(&root, manifest, &mut findings)?;
         append_patch_artifact_findings(&root, manifest, &mut findings);
     }
     Ok(findings)
+}
+
+fn current_branch(root: &Path) -> Result<String, String> {
+    let branch = git(root, ["branch", "--show-current"])?;
+    Ok(branch.trim().into())
+}
+
+fn append_repository_findings(
+    root: &Path,
+    manifest: &Manifest,
+    findings: &mut Vec<String>,
+) -> Result<(), String> {
+    let head = git(root, ["rev-parse", "HEAD"])?;
+    if head.trim() != manifest.repository.head {
+        findings.push(format!(
+            "HEAD differs (recorded {}, found {})",
+            manifest.repository.head,
+            head.trim()
+        ));
+    }
+    let branch = current_branch(root)?;
+    if branch != manifest.repository.branch {
+        findings.push(format!(
+            "branch differs (recorded {}, found {})",
+            manifest.repository.branch, branch
+        ));
+    }
+    Ok(())
 }
 
 fn append_patch_artifact_findings(root: &Path, manifest: &Manifest, findings: &mut Vec<String>) {

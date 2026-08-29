@@ -6,7 +6,7 @@ description = "Portable, signed validation checkpoints for git workspaces"
 license = "MIT"
 repository = "https://github.com/B-Divyesh/sf-change-checkpoint-manifest"
 readme = "README.md"
-include = ["src/**", "examples/**", "Cargo.toml", "Cargo.lock", "README.md", "LICENSE", "CHANGELOG.md"]
+include = ["/src/**", "/examples/**", "/Cargo.toml", "/Cargo.lock", "/README.md", "/LICENSE", "/CHANGELOG.md"]
 
 [[bin]]
 name = "cpc"

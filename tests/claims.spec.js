@@ -230,11 +230,13 @@ test("@claim:validated-environment @claim:json-errors checkpoint validates envir
 test("@claim:post-check-state checkpoint records Git state after successful checks", () => {
   const repo = makeGitRepository("cpc-post-check-state-");
   const created = runCpc(repo, [
-    "checkpoint", "mutating-check", "--check", "printf 'mutated\\n' >> tracked.txt",
+    "checkpoint", "mutating-check", "--check",
+    "git switch -c post-check-branch && printf 'mutated\\n' >> tracked.txt",
     "--rollback", "git restore tracked.txt", "--json",
   ]);
   expect(created.status).toBe(0);
   const manifest = JSON.parse(readFileSync(JSON.parse(created.stdout).manifest, "utf8"));
+  expect(manifest.repository.branch).toBe("post-check-branch");
   expect(manifest.workspace.status).toContain("tracked.txt");
   expect(manifest.checks[0].exit_code).toBe(0);
   const verified = runCpc(repo, ["verify", JSON.parse(created.stdout).manifest, "--json"]);
@@ -446,6 +448,23 @@ test("@claim:verify-manifest cpc verifies the sample state and reruns its checks
     { cwd: result.demo_directory, encoding: "utf8" },
   );
   expect(JSON.parse(verified)).toMatchObject({ valid: true, rerun: true });
+
+  const recordedBranch = JSON.parse(
+    readFileSync(result.manifest, "utf8"),
+  ).repository.branch;
+  execFileSync("git", ["switch", "-c", "review-alternate"], {
+    cwd: result.demo_directory,
+  });
+  const wrongBranch = runCpc(result.demo_directory, [
+    "verify", result.manifest, "--json",
+  ]);
+  expect(wrongBranch.status).toBe(2);
+  expect(JSON.parse(wrongBranch.stdout)).toMatchObject({
+    valid: false,
+    findings: [
+      `branch differs (recorded ${recordedBranch}, found review-alternate)`,
+    ],
+  });
 });
 
 test("@claim:trusted-signature a forged self-signed manifest cannot run its recorded command", async () => {
@@ -784,16 +803,55 @@ test("@claim:web-demo-verify keyboard paths check the bundled browser record and
   await page
     .getByRole("button", { name: "Check sample record" })
     .press("Enter");
-  await expect(
-    page.getByText("The displayed sample matches the bundled record."),
-  ).toBeVisible();
+  const result = page.locator("#verify-result");
+  await expect(result).toHaveText(
+    "The displayed sample matches the bundled record.",
+  );
   await page.locator('[data-field="hash"]').evaluate((element) => {
     element.textContent = "changed";
   });
   await page.getByRole("button", { name: "Check sample record" }).click();
-  await expect(
-    page.getByText("The displayed sample does not match the bundled record."),
-  ).toBeVisible();
+  await expect(result).toHaveText(
+    "The displayed sample does not match the bundled record.",
+  );
+});
+
+test("CLI help and version commands print information and exit successfully", () => {
+  const cases = [
+    { args: ["--help"], output: "Record portable, signed Git checkpoints" },
+    { args: ["--version"], output: "cpc 0.1.0" },
+    { args: ["help"], output: "Usage: cpc <COMMAND>" },
+    { args: ["checkpoint", "--help"], output: "Record Git state" },
+    { args: ["verify", "--help"], output: "Verify a manifest signature" },
+    { args: ["restore", "--help"], output: "show the rollback note" },
+    { args: ["demo", "--help"], output: "Run the bundled sample" },
+  ];
+  for (const { args, output } of cases) {
+    const result = runCpc(process.cwd(), args);
+    expect(result.status, `cpc ${args.join(" ")} status`).toBe(0);
+    expect(result.stdout).toContain(output);
+    expect(result.stderr).toBe("");
+  }
+});
+
+test("the Cargo package contains only publishable project files", () => {
+  const packaged = execFileSync(
+    "cargo",
+    ["package", "--list", "--allow-dirty"],
+    { encoding: "utf8" },
+  ).trim().split("\n");
+  expect(packaged).not.toContain(expect.stringMatching(/^node_modules\//));
+  expect(packaged).toEqual(expect.arrayContaining([
+    "Cargo.toml",
+    "LICENSE",
+    "README.md",
+    "src/main.rs",
+  ]));
+  for (const path of packaged) {
+    expect(path).toMatch(
+      /^(?:\.cargo_vcs_info\.json|CHANGELOG\.md|Cargo\.lock|Cargo\.toml(?:\.orig)?|LICENSE|README\.md|examples\/sample-repo\/(?:README\.md|src\/lib\.rs)|src\/main\.rs)$/,
+    );
+  }
 });
 
 test("@claim:install-from-source the install section gives the public clone path and Cargo installs from an isolated source copy", async ({ page }) => {

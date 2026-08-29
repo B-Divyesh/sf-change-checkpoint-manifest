@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Returned successful statuses for help and version commands.
+- Verified the signed branch as part of repository state.
+- Made browser sample verification synchronous and deterministic.
+- Excluded dependency documentation from the publishable Cargo package.
 - Refused symlinked, aliased, or same-name checkpoint artifacts without
   replacing their targets.
 - Included new untracked files in opt-in patches and checked saved patch bytes
