@@ -1,0 +1,35 @@
+{
+  "implementation_commit": "9190c1fcbd476e131bd47162995b3d1a0cf271b8",
+  "deployment_id": "9976872f-0b9f-4919-9942-5459bcc5eaa4",
+  "origin": "https://change-checkpoint-manifest.sociobot.in",
+  "routes": {
+    "/": { "status": 200, "sha256": "1ef77d9b955f605dc4d435e93124d88dcdf1593c3d24057c0dd87d35c3fdead9" },
+    "/demo": { "status": 200, "sha256": "31bea2fc9d45aa2d112791e3bbdb0fd449377f41daf5b6df45af21145b72ef81" },
+    "/privacy": { "status": 200, "sha256": "15707020aa5ec002598442c48fe4f23cd2e70563bab069d97b364334f96de4e8" },
+    "/terms": { "status": 200, "sha256": "aa324d9713fbf8038a5f625099fa4c91c59dc2305995eb96089b4e2d515f0a4f" },
+    "/404.html": { "status": 200, "sha256": "7aa8285d59975580fd1957f906dfdc806c2b7c55da9f932f0400913e9625ea03" },
+    "/release-repair-missing": { "status": 404 }
+  },
+  "assets": {
+    "checkpoint-press-B0lmgM-Z.webp": "afeae18cf563c549a959c92a5bf34abacb4ba6edccfdbc04e78b807c84358f5a",
+    "index-BLCWmL4I.js": "c0740da6c40cf09a7ee047bb813707a762175ff1fe076f3ed4515f43ba547fb1",
+    "style-B7qw40J4.css": "c6ed015c2c98aeb37a90d9ee7366c0001c75509db9e0851a22b9fbd22fc7cbf0"
+  },
+  "browser": {
+    "viewports": ["1440x900", "390x844"],
+    "routes_checked": 5,
+    "axe_violations": 0,
+    "console_errors": 0,
+    "horizontal_overflow": 0,
+    "request_origins": ["https://change-checkpoint-manifest.sociobot.in"],
+    "keyboard_flow": "pass"
+  },
+  "headers": {
+    "html_cache_control": "public, must-revalidate, max-age=30",
+    "asset_cache_control": "public, max-age=31536000, immutable",
+    "strict_transport_security": "max-age=10886400; includeSubDomains; preload",
+    "referrer_policy": "strict-origin-when-cross-origin",
+    "x_content_type_options": "nosniff",
+    "content_security_policy": "default-src 'self'; img-src 'self'; style-src 'self'; script-src 'self'; connect-src 'self'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'"
+  }
+}

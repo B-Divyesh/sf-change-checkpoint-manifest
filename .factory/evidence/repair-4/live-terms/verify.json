@@ -1,0 +1,14 @@
+{
+  "url": "https://change-checkpoint-manifest.sociobot.in/terms",
+  "loadMs": 550,
+  "errors": [],
+  "a11y": {
+    "title": "Terms — Change Checkpoints",
+    "lang": "en",
+    "h1": 1,
+    "main": true,
+    "imgsMissingAlt": 0,
+    "buttonsUnlabeled": 0,
+    "textLength": 573
+  }
+}

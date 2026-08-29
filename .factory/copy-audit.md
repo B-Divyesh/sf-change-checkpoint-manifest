@@ -1,10 +1,11 @@
-# Copy audit — repair 3
+# Copy audit — repair 4
 
 Catalog description (69 characters): **Record Git changes, check results, and
 rollback notes in local checkpoints.** It begins with a verb and stays
 below the 120-character limit.
 
-Every visitor-facing source was reviewed after the checkpoint safety repair.
+Every visitor-facing source was reviewed after the release-blocker repair.
+No visitor-facing sentence changed in repair 4.
 No sentence exceeds 22 words. A case-insensitive scan of the landing page,
 README, and catalog description found none of the banned marketing words.
 Commands and sample manifest values are executable input or data, so they are
