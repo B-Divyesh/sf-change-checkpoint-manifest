@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- Pinned a trusted public key outside each manifest and blocked check reruns
+  until trust, repository state, and explicit command approval all pass.
+- Added safe NUL-delimited Git path parsing for directories, spaces, Unicode,
+  and renames.
+- Protected and reliably ignored private keys, and removed absolute local paths
+  from portable JSON and Markdown files.
+- Added raw route metadata, browser-history focus restoration, and the compact
+  mobile demo banner.
 - Made `restore` validate the current repository and environment before showing
   a rollback note, with opt-in check reruns.
 - Removed the unavailable paid offer and documented every retained product

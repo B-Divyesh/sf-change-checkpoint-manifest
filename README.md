@@ -1,6 +1,6 @@
 # Change Checkpoints
 
-Record a Git change, its checks, and a rollback note in one signed checkpoint.
+Record a Git change, its checks, and a rollback note in one trusted checkpoint.
 It is for teams reviewing rapid agent or developer edits.
 
 The CLI records Git state and each selected command's exit status. It does not
@@ -33,24 +33,36 @@ cpc checkpoint auth-timeout \
 ```
 
 This writes `.change-checkpoints/auth-timeout.json` and a Markdown summary
-beside it. The JSON is signed with an Ed25519 key stored locally at
-`.change-checkpoints/signing.key`.
+beside it. These portable files do not contain the repository's absolute path.
 
-The command adds a local `.change-checkpoints/.gitignore` entry for that key.
+The JSON uses an Ed25519 signing key at
+`.change-checkpoints/signing.key`. The key has owner-only permissions on Unix.
+The command adds `/signing.key` to `.change-checkpoints/.gitignore` without
+removing existing rules.
+
+The matching public key is pinned outside the manifest under `.git`. A copy at
+`.change-checkpoints/signing.pub` can be shared through a channel you trust.
+Verification rejects a manifest signed by any other key.
 
 Add `--include-diff` when you need a patch next to the manifest. Review that
 patch before sharing it. A diff may contain secrets.
 
-Verify the current checkout later:
+First inspect the current checkout and the exact recorded commands:
 
 ```sh
 cpc verify .change-checkpoints/auth-timeout.json --rerun
-cpc restore .change-checkpoints/auth-timeout.json --rerun
 ```
 
-`restore` checks the signature, current Git state, and environment before it
-shows the rollback note. Add `--rerun` to check recorded command exits too.
-It never executes the rollback note.
+That command does not run the checks. Approve those exact commands separately:
+
+```sh
+cpc verify .change-checkpoints/auth-timeout.json --rerun --approve-rerun
+cpc restore .change-checkpoints/auth-timeout.json --rerun --approve-rerun
+```
+
+Use `--trusted-key /trusted/path/signing.pub` when the local pin is unavailable.
+`restore` checks trust and current state before it shows the rollback note. It
+never executes the rollback note.
 
 ## Try the bundled sample
 
@@ -75,13 +87,11 @@ npm run build       # release binary + static site in dist/site
 npm run pack:cli    # validates the publishable Cargo package; does not publish
 ```
 
-To preview the site, use `npm run dev`. The site has `/demo`, `/privacy`, and
-`/terms` routes. It contains no analytics or third-party runtime assets. The
-regular site stores nothing in the browser. The demo uses one separate key and
-clears it when you leave.
+The site contains no analytics or third-party runtime assets. The regular site
+stores nothing in the browser. The demo uses one separate key and clears it
+when you leave.
 
-The factory deploys `dist/site` as a static site. This repository does not
-manage DNS, billing, or other infrastructure.
+Deploy the generated `dist/site` directory to static hosting.
 
 ## License
 

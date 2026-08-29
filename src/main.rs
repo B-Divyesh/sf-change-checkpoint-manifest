@@ -5,11 +5,16 @@ use rand::rngs::OsRng;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::{
-    env, fs, io,
+    env, fs,
+    fs::OpenOptions,
+    io::{self, Write},
     path::{Path, PathBuf},
     process::{Command, ExitCode},
     time::{Instant, SystemTime, UNIX_EPOCH},
 };
+
+#[cfg(unix)]
+use std::os::unix::fs::{OpenOptionsExt, PermissionsExt};
 
 #[derive(Parser)]
 #[command(
@@ -48,9 +53,15 @@ enum Commands {
     Verify {
         /// JSON manifest path.
         manifest: PathBuf,
-        /// Re-run recorded validation commands. Command output is still not saved.
+        /// Preview the exact recorded commands. Add --approve-rerun to run them.
         #[arg(long)]
         rerun: bool,
+        /// Confirm that the exact recorded commands may run after trust and state checks pass.
+        #[arg(long, requires = "rerun")]
+        approve_rerun: bool,
+        /// Public key obtained from a trusted source. Defaults to this repository's local pinned key.
+        #[arg(long)]
+        trusted_key: Option<PathBuf>,
         /// Print a machine-readable result.
         #[arg(long)]
         json: bool,
@@ -59,9 +70,15 @@ enum Commands {
     Restore {
         /// JSON manifest path.
         manifest: PathBuf,
-        /// Re-run recorded validation commands before showing the rollback note.
+        /// Preview the exact recorded commands. Add --approve-rerun to run them before showing the note.
         #[arg(long)]
         rerun: bool,
+        /// Confirm that the exact recorded commands may run after trust and state checks pass.
+        #[arg(long, requires = "rerun")]
+        approve_rerun: bool,
+        /// Public key obtained from a trusted source. Defaults to this repository's local pinned key.
+        #[arg(long)]
+        trusted_key: Option<PathBuf>,
         /// Print a machine-readable result.
         #[arg(long)]
         json: bool,
@@ -90,7 +107,6 @@ struct Manifest {
 
 #[derive(Serialize, Deserialize, Clone)]
 struct Repository {
-    root: String,
     head: String,
     branch: String,
 }
@@ -130,6 +146,13 @@ struct SignatureBlock {
     value: String,
 }
 
+#[derive(Debug, PartialEq, Eq)]
+struct StatusEntry {
+    code: String,
+    path: String,
+    original_path: Option<String>,
+}
+
 fn main() -> ExitCode {
     match run(Cli::parse()) {
         Ok(code) => ExitCode::from(code),
@@ -153,13 +176,29 @@ fn run(cli: Cli) -> Result<u8, String> {
         Commands::Verify {
             manifest,
             rerun,
+            approve_rerun,
+            trusted_key,
             json,
-        } => verify(&manifest, rerun, json),
+        } => verify(
+            &manifest,
+            rerun,
+            approve_rerun,
+            trusted_key.as_deref(),
+            json,
+        ),
         Commands::Restore {
             manifest,
             rerun,
+            approve_rerun,
+            trusted_key,
             json,
-        } => restore(&manifest, rerun, json),
+        } => restore(
+            &manifest,
+            rerun,
+            approve_rerun,
+            trusted_key.as_deref(),
+            json,
+        ),
         Commands::Demo { json } => demo(json),
     }
 }
@@ -179,9 +218,8 @@ fn checkpoint(
     let root = git_root()?;
     let head = git(&root, ["rev-parse", "HEAD"])?;
     let branch = git(&root, ["branch", "--show-current"]).unwrap_or_else(|_| "DETACHED".into());
-    let status = filtered_status(&git(&root, ["status", "--porcelain=v1"])?)?;
+    let (status, untracked) = workspace_state(&root)?;
     let diff = git_bytes(&root, ["diff", "--binary", "HEAD"])?;
-    let untracked = untracked_artifacts(&root, &status)?;
     let runs = commands
         .iter()
         .map(|command| run_check(&root, command))
@@ -202,7 +240,7 @@ fn checkpoint(
     } else {
         None
     };
-    let key = load_or_make_key(&directory)?;
+    let key = load_or_make_key(&root, &directory)?;
     let public = B64.encode(key.verifying_key().to_bytes());
     let mut manifest = Manifest {
         format: "change-checkpoints/v1".into(),
@@ -212,7 +250,6 @@ fn checkpoint(
             .map_err(|e| e.to_string())?
             .as_secs(),
         repository: Repository {
-            root: root.display().to_string(),
             head: head.trim().into(),
             branch: branch.trim().into(),
         },
@@ -240,7 +277,7 @@ fn checkpoint(
         serde_json::to_vec_pretty(&manifest).map_err(|e| e.to_string())?,
     )
     .map_err(io_error)?;
-    fs::write(&markdown_path, render_markdown(&manifest, &json_path)).map_err(io_error)?;
+    fs::write(&markdown_path, render_markdown(&manifest)).map_err(io_error)?;
     if json {
         println!(
             "{}",
@@ -268,13 +305,44 @@ fn checkpoint(
     })
 }
 
-fn verify(path: &Path, rerun: bool, json: bool) -> Result<u8, String> {
+fn verify(
+    path: &Path,
+    rerun: bool,
+    approve_rerun: bool,
+    trusted_key: Option<&Path>,
+    json: bool,
+) -> Result<u8, String> {
     let manifest = read_manifest(path)?;
-    let findings = verification_findings(&manifest, rerun)?;
+    let findings = verification_findings(&manifest, trusted_key, rerun && approve_rerun)?;
+    if findings.is_empty() && rerun && !approve_rerun {
+        let commands = manifest
+            .checks
+            .iter()
+            .map(|check| check.command.clone())
+            .collect::<Vec<_>>();
+        if json {
+            println!(
+                "{}",
+                serde_json::json!({
+                    "valid": true,
+                    "approval_required": true,
+                    "commands": commands,
+                    "rerun": false
+                })
+            );
+        } else {
+            println!("Trust and recorded state match. These commands have not run:");
+            for command in &commands {
+                println!("  {command}");
+            }
+            println!("Run again with --rerun --approve-rerun to approve these exact commands.");
+        }
+        return Ok(3);
+    }
     if json {
         println!(
             "{}",
-            serde_json::json!({"valid": findings.is_empty(), "findings": findings, "rerun": rerun})
+            serde_json::json!({"valid": findings.is_empty(), "findings": findings, "rerun": rerun && approve_rerun})
         );
     } else if findings.is_empty() {
         println!(
@@ -293,13 +361,28 @@ fn verify(path: &Path, rerun: bool, json: bool) -> Result<u8, String> {
     Ok(if findings.is_empty() { 0 } else { 2 })
 }
 
-fn verification_findings(manifest: &Manifest, rerun: bool) -> Result<Vec<String>, String> {
+fn verification_findings(
+    manifest: &Manifest,
+    trusted_key: Option<&Path>,
+    rerun: bool,
+) -> Result<Vec<String>, String> {
     let mut findings = Vec::new();
-    if !signature_valid(manifest)? {
-        findings.push("signature is invalid".into());
+    let root = git_root()?;
+    let trusted = match read_trusted_key(&root, trusted_key) {
+        Ok(key) => key,
+        Err(error) => {
+            findings.push(error);
+            return Ok(findings);
+        }
+    };
+    match signature_valid(manifest, &trusted) {
+        Ok(true) => {}
+        Ok(false) => findings.push("signature is invalid".into()),
+        Err(error) => findings.push(error),
+    }
+    if !findings.is_empty() {
         return Ok(findings);
     }
-    let root = git_root()?;
     let head = git(&root, ["rev-parse", "HEAD"])?;
     if head.trim() != manifest.repository.head {
         findings.push(format!(
@@ -312,11 +395,11 @@ fn verification_findings(manifest: &Manifest, rerun: bool) -> Result<Vec<String>
     if hash(&diff) != manifest.workspace.diff_sha256 {
         findings.push("working-tree diff differs".into());
     }
-    let status = filtered_status(&git(&root, ["status", "--porcelain=v1"])?)?;
+    let (status, untracked) = workspace_state(&root)?;
     if status.trim_end() != manifest.workspace.status {
         findings.push("workspace status differs".into());
     }
-    if untracked_artifacts(&root, &status)? != manifest.workspace.untracked {
+    if untracked != manifest.workspace.untracked {
         findings.push("untracked artifact fingerprints differ".into());
     }
     for assertion in &manifest.environment {
@@ -327,7 +410,7 @@ fn verification_findings(manifest: &Manifest, rerun: bool) -> Result<Vec<String>
             findings.push(format!("environment assertion differs: {}", assertion.name));
         }
     }
-    if rerun {
+    if rerun && findings.is_empty() {
         for check in &manifest.checks {
             let fresh = run_check(&root, &check.command);
             if fresh.exit_code != check.exit_code {
@@ -338,9 +421,40 @@ fn verification_findings(manifest: &Manifest, rerun: bool) -> Result<Vec<String>
     Ok(findings)
 }
 
-fn restore(path: &Path, rerun: bool, json: bool) -> Result<u8, String> {
+fn restore(
+    path: &Path,
+    rerun: bool,
+    approve_rerun: bool,
+    trusted_key: Option<&Path>,
+    json: bool,
+) -> Result<u8, String> {
     let manifest = read_manifest(path)?;
-    let findings = verification_findings(&manifest, rerun)?;
+    let findings = verification_findings(&manifest, trusted_key, rerun && approve_rerun)?;
+    if findings.is_empty() && rerun && !approve_rerun {
+        let commands = manifest
+            .checks
+            .iter()
+            .map(|check| check.command.clone())
+            .collect::<Vec<_>>();
+        if json {
+            println!(
+                "{}",
+                serde_json::json!({
+                    "valid": true,
+                    "approval_required": true,
+                    "commands": commands,
+                    "checks_rerun": false
+                })
+            );
+        } else {
+            println!("Trust and recorded state match. These commands have not run:");
+            for command in &commands {
+                println!("  {command}");
+            }
+            println!("Run again with --rerun --approve-rerun to approve these exact commands.");
+        }
+        return Ok(3);
+    }
     if findings.is_empty() {
         if json {
             println!(
@@ -349,13 +463,13 @@ fn restore(path: &Path, rerun: bool, json: bool) -> Result<u8, String> {
                     "valid": true,
                     "rollback": manifest.rollback,
                     "head": manifest.repository.head,
-                    "checks_rerun": rerun
+                    "checks_rerun": rerun && approve_rerun
                 })
             );
         } else {
             println!(
                 "Current state verified{}; rollback note not executed:\n{}",
-                if rerun {
+                if rerun && approve_rerun {
                     " with recorded checks"
                 } else {
                     "; recorded checks not rerun"
@@ -371,7 +485,7 @@ fn restore(path: &Path, rerun: bool, json: bool) -> Result<u8, String> {
                 serde_json::json!({
                     "valid": false,
                     "findings": findings,
-                    "checks_rerun": rerun
+                    "checks_rerun": rerun && approve_rerun
                 })
             );
         } else {
@@ -501,61 +615,231 @@ fn parse_environment(value: &str) -> Result<EnvironmentAssertion, String> {
         value_sha256: actual.as_ref().map(|s| hash(s.as_bytes())),
     })
 }
-fn untracked_artifacts(root: &Path, status: &str) -> Result<Vec<Artifact>, String> {
-    status
-        .lines()
-        .filter(|line| line.starts_with("?? "))
-        .map(|line| {
-            let name = &line[3..];
-            let bytes = fs::read(root.join(name)).map_err(io_error)?;
+fn workspace_state(root: &Path) -> Result<(String, Vec<Artifact>), String> {
+    let raw = git_bytes(
+        root,
+        ["status", "--porcelain=v1", "-z", "--untracked-files=all"],
+    )?;
+    let entries = parse_status(&raw)?
+        .into_iter()
+        .filter(|entry| !is_checkpoint_path(&entry.path))
+        .collect::<Vec<_>>();
+    let status = entries
+        .iter()
+        .map(|entry| {
+            let path = serde_json::to_string(&entry.path).expect("strings serialize");
+            match &entry.original_path {
+                Some(original) => format!(
+                    "{} {} <- {}",
+                    entry.code,
+                    path,
+                    serde_json::to_string(original).expect("strings serialize")
+                ),
+                None => format!("{} {}", entry.code, path),
+            }
+        })
+        .collect::<Vec<_>>()
+        .join("\n");
+    let untracked = entries
+        .iter()
+        .filter(|entry| entry.code == "??")
+        .map(|entry| {
+            let path = root.join(&entry.path);
+            let metadata = fs::metadata(&path).map_err(io_error)?;
+            if !metadata.is_file() {
+                return Err(format!(
+                    "untracked path is not a regular file: {}",
+                    entry.path
+                ));
+            }
+            let bytes = fs::read(&path).map_err(io_error)?;
             Ok(Artifact {
-                path: name.into(),
+                path: entry.path.clone(),
                 sha256: hash(&bytes),
             })
         })
-        .collect()
+        .collect::<Result<Vec<_>, _>>()?;
+    Ok((status, untracked))
 }
-fn filtered_status(status: &str) -> Result<String, String> {
-    Ok(status
-        .lines()
-        .filter(|line| {
-            !line
-                .get(3..)
-                .unwrap_or_default()
-                .starts_with(".change-checkpoints/")
-                && !line
-                    .get(3..)
-                    .unwrap_or_default()
-                    .starts_with(".change-checkpoints\\")
-        })
-        .collect::<Vec<_>>()
-        .join("\n"))
+
+fn parse_status(raw: &[u8]) -> Result<Vec<StatusEntry>, String> {
+    let mut fields = raw
+        .split(|byte| *byte == 0)
+        .filter(|field| !field.is_empty());
+    let mut entries = Vec::new();
+    while let Some(field) = fields.next() {
+        if field.len() < 4 || field[2] != b' ' {
+            return Err("Git returned an invalid status record".into());
+        }
+        let code = std::str::from_utf8(&field[..2])
+            .map_err(|_| "Git returned an invalid status code")?
+            .to_string();
+        let path = std::str::from_utf8(&field[3..])
+            .map_err(|_| "a Git path is not valid UTF-8; rename it before recording")?
+            .to_string();
+        let original_path = if code.contains('R') || code.contains('C') {
+            let original = fields
+                .next()
+                .ok_or("Git omitted the original path for a rename")?;
+            Some(
+                std::str::from_utf8(original)
+                    .map_err(|_| "a Git path is not valid UTF-8; rename it before recording")?
+                    .to_string(),
+            )
+        } else {
+            None
+        };
+        entries.push(StatusEntry {
+            code,
+            path,
+            original_path,
+        });
+    }
+    Ok(entries)
 }
-fn load_or_make_key(directory: &Path) -> Result<SigningKey, String> {
+
+fn is_checkpoint_path(path: &str) -> bool {
+    path == ".change-checkpoints"
+        || path.starts_with(".change-checkpoints/")
+        || path.starts_with(".change-checkpoints\\")
+}
+
+fn load_or_make_key(root: &Path, directory: &Path) -> Result<SigningKey, String> {
+    ensure_key_ignore(root, directory)?;
     let path = directory.join("signing.key");
-    if path.exists() {
+    let key = if path.exists() {
+        restrict_private_key(&path)?;
         let bytes = fs::read(&path).map_err(io_error)?;
         let data: [u8; 32] = bytes
             .as_slice()
             .try_into()
             .map_err(|_| "invalid local signing key")?;
-        Ok(SigningKey::from_bytes(&data))
+        SigningKey::from_bytes(&data)
     } else {
         let key = SigningKey::generate(&mut OsRng);
-        fs::write(&path, key.to_bytes()).map_err(io_error)?;
-        let ignore = directory.join(".gitignore");
-        if !ignore.exists() {
-            fs::write(ignore, "signing.key\n").map_err(io_error)?;
+        write_private_key(&path, &key.to_bytes())?;
+        key
+    };
+    let public = B64.encode(key.verifying_key().to_bytes());
+    pin_public_key(root, directory, &public)?;
+    Ok(key)
+}
+
+fn ensure_key_ignore(root: &Path, directory: &Path) -> Result<(), String> {
+    let ignore = directory.join(".gitignore");
+    let mut contents = if ignore.exists() {
+        fs::read_to_string(&ignore).map_err(io_error)?
+    } else {
+        String::new()
+    };
+    if !contents.lines().any(|line| line.trim() == "/signing.key") {
+        if !contents.is_empty() && !contents.ends_with('\n') {
+            contents.push('\n');
         }
-        Ok(key)
+        contents.push_str("/signing.key\n");
+        fs::write(&ignore, contents).map_err(io_error)?;
     }
+    let ignored = Command::new("git")
+        .args([
+            "check-ignore",
+            "--quiet",
+            "--",
+            ".change-checkpoints/signing.key",
+        ])
+        .current_dir(root)
+        .status()
+        .map_err(io_error)?;
+    if !ignored.success() {
+        return Err(
+            "the signing key is not ignored by Git; add /signing.key to .change-checkpoints/.gitignore"
+                .into(),
+        );
+    }
+    Ok(())
+}
+
+fn write_private_key(path: &Path, bytes: &[u8]) -> Result<(), String> {
+    let mut options = OpenOptions::new();
+    options.write(true).create_new(true);
+    #[cfg(unix)]
+    options.mode(0o600);
+    let mut file = options.open(path).map_err(io_error)?;
+    file.write_all(bytes).map_err(io_error)?;
+    restrict_private_key(path)
+}
+
+fn restrict_private_key(path: &Path) -> Result<(), String> {
+    #[cfg(unix)]
+    {
+        fs::set_permissions(path, fs::Permissions::from_mode(0o600)).map_err(io_error)?;
+    }
+    Ok(())
+}
+
+fn pin_public_key(root: &Path, directory: &Path, public: &str) -> Result<(), String> {
+    let portable = directory.join("signing.pub");
+    ensure_key_matches_or_write(&portable, public, "portable public key")?;
+    let local = local_trusted_key_path(root)?;
+    if let Some(parent) = local.parent() {
+        fs::create_dir_all(parent).map_err(io_error)?;
+    }
+    ensure_key_matches_or_write(&local, public, "repository's pinned public key")
+}
+
+fn ensure_key_matches_or_write(path: &Path, public: &str, label: &str) -> Result<(), String> {
+    if path.exists() {
+        if fs::read_to_string(path).map_err(io_error)?.trim() != public {
+            return Err(format!(
+                "the signing key does not match the {label} at {}",
+                path.display()
+            ));
+        }
+    } else {
+        fs::write(path, format!("{public}\n")).map_err(io_error)?;
+    }
+    Ok(())
+}
+
+fn local_trusted_key_path(root: &Path) -> Result<PathBuf, String> {
+    let git_directory = PathBuf::from(git(root, ["rev-parse", "--git-dir"])?);
+    let git_directory = if git_directory.is_absolute() {
+        git_directory
+    } else {
+        root.join(git_directory)
+    };
+    Ok(git_directory
+        .join("change-checkpoints")
+        .join("trusted-public.key"))
+}
+
+fn read_trusted_key(root: &Path, provided: Option<&Path>) -> Result<VerifyingKey, String> {
+    let path = provided
+        .map(PathBuf::from)
+        .map(Ok)
+        .unwrap_or_else(|| local_trusted_key_path(root))?;
+    if !path.exists() {
+        return Err(format!(
+            "trusted public key is unavailable at {}; use --trusted-key with a key obtained from a trusted source",
+            path.display()
+        ));
+    }
+    let encoded = fs::read_to_string(&path).map_err(io_error)?;
+    let decoded = B64
+        .decode(encoded.trim())
+        .map_err(|_| format!("trusted public key is invalid: {}", path.display()))?;
+    let bytes: [u8; 32] = decoded
+        .as_slice()
+        .try_into()
+        .map_err(|_| format!("trusted public key is invalid: {}", path.display()))?;
+    VerifyingKey::from_bytes(&bytes)
+        .map_err(|_| format!("trusted public key is invalid: {}", path.display()))
 }
 fn unsigned_bytes(manifest: &Manifest) -> Result<Vec<u8>, String> {
     let mut unsigned = manifest.clone();
     unsigned.signature.value.clear();
     serde_json::to_vec(&unsigned).map_err(|e| e.to_string())
 }
-fn signature_valid(manifest: &Manifest) -> Result<bool, String> {
+fn signature_valid(manifest: &Manifest, trusted: &VerifyingKey) -> Result<bool, String> {
     if manifest.signature.algorithm != "ed25519" {
         return Ok(false);
     }
@@ -567,6 +851,9 @@ fn signature_valid(manifest: &Manifest) -> Result<bool, String> {
         .try_into()
         .map_err(|_| "invalid public key")?;
     let verifying = VerifyingKey::from_bytes(&bytes).map_err(|_| "invalid public key")?;
+    if verifying != *trusted {
+        return Err("manifest public key does not match the trusted public key".into());
+    }
     let signed = B64
         .decode(&manifest.signature.value)
         .map_err(|_| "invalid signature")?;
@@ -577,7 +864,7 @@ fn read_manifest(path: &Path) -> Result<Manifest, String> {
     serde_json::from_slice(&fs::read(path).map_err(io_error)?)
         .map_err(|e| format!("could not parse manifest: {e}"))
 }
-fn render_markdown(manifest: &Manifest, json_path: &Path) -> String {
+fn render_markdown(manifest: &Manifest) -> String {
     let checks = manifest
         .checks
         .iter()
@@ -596,7 +883,8 @@ fn render_markdown(manifest: &Manifest, json_path: &Path) -> String {
         })
         .collect::<Vec<_>>()
         .join("\n");
-    format!("# Change checkpoint: {}\n\n- Git commit: `{}`\n- Branch: `{}`\n- Changes hash: `{}`\n- Signed with: Ed25519\n- JSON manifest: `{}`\n\n## Validation\n\n| Command | Exit | Time | Reproducibility |\n| --- | ---: | ---: | --- |\n{}\n\n## Verify\n\n```sh\ncpc verify {} --rerun\n```\n\n## Roll back\n\nThis is a note only. `cpc` never runs it.\n\n```sh\n{}\n```\n", manifest.name, manifest.repository.head, manifest.repository.branch, manifest.workspace.diff_sha256, json_path.display(), checks, json_path.display(), manifest.rollback)
+    let json_path = format!(".change-checkpoints/{}.json", manifest.name);
+    format!("# Change checkpoint: {}\n\n- Git commit: `{}`\n- Branch: `{}`\n- Changes hash: `{}`\n- Signed with: Ed25519\n- JSON manifest: `{}`\n\n## Validation\n\n| Command | Exit | Time | Reproducibility |\n| --- | ---: | ---: | --- |\n{}\n\n## Verify safely\n\nInspect the commands first. No command runs in this step.\n\n```sh\ncpc verify {} --rerun\n```\n\nThen approve those exact commands.\n\n```sh\ncpc verify {} --rerun --approve-rerun\n```\n\n## Roll back\n\nThis is a note only. `cpc` never runs it.\n\n```sh\n{}\n```\n", manifest.name, manifest.repository.head, manifest.repository.branch, manifest.workspace.diff_sha256, json_path, checks, json_path, json_path, manifest.rollback)
 }
 fn hash(bytes: &[u8]) -> String {
     format!("{:x}", Sha256::digest(bytes))
@@ -639,5 +927,27 @@ mod tests {
     #[test]
     fn rejects_unsafe_checkpoint_names() {
         assert!(valid_name("two words").is_err());
+    }
+    #[test]
+    fn parses_nul_delimited_paths_and_renames_without_git_quoting() {
+        let entries = parse_status(
+            b"?? new directory/r\xc3\xa9sum\xc3\xa9.txt\0R  src/new name.rs\0src/old.rs\0",
+        )
+        .unwrap();
+        assert_eq!(
+            entries,
+            vec![
+                StatusEntry {
+                    code: "??".into(),
+                    path: "new directory/résumé.txt".into(),
+                    original_path: None,
+                },
+                StatusEntry {
+                    code: "R ".into(),
+                    path: "src/new name.rs".into(),
+                    original_path: Some("src/old.rs".into()),
+                },
+            ]
+        );
     }
 }

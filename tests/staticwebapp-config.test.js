@@ -41,6 +41,28 @@ test("Azure Static Web Apps uses pre-rendered routes and a response override for
   }
 });
 
+test("physical deep-link HTML has route-specific metadata before JavaScript runs", () => {
+  const expected = {
+    demo: ["Demo — Change Checkpoints", "A safe sample of a local Git checkpoint."],
+    privacy: [
+      "Privacy — Change Checkpoints",
+      "How Change Checkpoints handles local files and sample data.",
+    ],
+    terms: ["Terms — Change Checkpoints", "Terms for Change Checkpoints."],
+  };
+  for (const [route, [title, description]] of Object.entries(expected)) {
+    const html = readFileSync(join(root, "dist", "site", route, "index.html"), "utf8");
+    assert.match(html, new RegExp(`<title>${title}</title>`));
+    assert.match(html, new RegExp(`name="description" content="${description.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}"`));
+    assert.match(
+      html,
+      new RegExp(`rel="canonical" href="https://change-checkpoint-manifest\\.sociobot\\.in/${route}"`),
+    );
+    assert.match(html, new RegExp(`property="og:title" content="${title}"`));
+    assert.match(html, new RegExp(`name="twitter:title" content="${title}"`));
+  }
+});
+
 test("hashed Vite assets receive a year-long immutable cache policy", () => {
   const assets = config.routes.find((route) => route.route === "/assets/*");
   assert.equal(

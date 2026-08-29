@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 
@@ -28,21 +29,38 @@ test("every listed visitor claim has one executable claim tag", () => {
 
 test("every public reliance-copy source is mapped to the claims inventory", () => {
   const ids = new Set(claims.map((claim) => claim.id));
-  for (const [source, sourceClaims] of Object.entries(publicClaims)) {
-    const copy = readFileSync(source, "utf8");
-    assert.ok(copy.length > 0, `${source} must be present for claim review`);
-    for (const id of sourceClaims) {
-      assert.ok(ids.has(id), `${source} references unknown claim ${id}`);
-    }
+  assert.equal(publicClaims.version, 2);
+  const mappedIds = new Set();
+  const mappedSentences = new Set();
+  for (const statement of publicClaims.statements) {
+    assert.equal(typeof statement.claim, "string", "each statement maps to exactly one claim ID");
+    assert.ok(ids.has(statement.claim), `${statement.source} references unknown claim ${statement.claim}`);
+    const source = readFileSync(statement.source, "utf8").replace(/\s+/g, " ");
+    const text = statement.text.replace(/\s+/g, " ");
+    assert.ok(source.includes(text), `${statement.source} is missing mapped sentence: ${text}`);
+    const key = `${statement.source}\0${text}`;
+    assert.ok(!mappedSentences.has(key), `${statement.source} maps a sentence more than once: ${text}`);
+    mappedSentences.add(key);
+    mappedIds.add(statement.claim);
   }
-  for (const id of [
-    "web-demo-verify",
-    "install-from-source",
-    "markdown-summary",
-    "cli-demo-isolated",
-    "runtime-requirements",
-  ])
-    assert.ok(ids.has(id), `review-2 reliance claim ${id} is inventoried`);
+  for (const id of ids) assert.ok(mappedIds.has(id), `claim ${id} has no sentence-level public mapping`);
+
+  for (const [source, digest] of Object.entries(publicClaims.reviewed_sources)) {
+    const copy = readFileSync(source);
+    assert.equal(
+      createHash("sha256").update(copy).digest("hex"),
+      digest,
+      `${source} changed; review every public sentence and update its claim mapping`,
+    );
+  }
+
+  const readme = readFileSync("README.md", "utf8");
+  for (const removed of [
+    "To preview the site, use `npm run dev`.",
+    "The site has `/demo`, `/privacy`, and `/terms` routes.",
+    "The factory deploys `dist/site` as a static site.",
+    "This repository does not manage DNS, billing, or other infrastructure.",
+  ]) assert.ok(!readme.includes(removed), `review-4 unlisted claim remains: ${removed}`);
 });
 
 test("the researched opportunity brief has the required review fields", () => {

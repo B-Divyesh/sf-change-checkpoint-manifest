@@ -16,5 +16,15 @@ cargo run -- demo
 
 The command creates a temporary Git repository with a small Rust source edit,
 runs `git diff --check` and `git status --porcelain`, then writes a signed
-manifest and an opt-in patch. It prints the temporary directory and manifest
-path. Delete that directory to reset it.
+manifest and an opt-in patch. Its private key is mode `0600` on Unix, and its
+public key is pinned below the temporary repository's `.git` directory. It
+prints the temporary directory and manifest path. Delete that directory to
+reset it.
+
+To inspect the exact recorded commands without running them:
+
+```sh
+cpc verify .change-checkpoints/agent-edit.json --rerun
+```
+
+Run the same command with `--approve-rerun` only after reviewing that list.

@@ -23,6 +23,9 @@
 html {
   scroll-behavior: smooth;
 }
+html.route-focus-instant {
+  scroll-behavior: auto;
+}
 body {
   margin: 0;
   background:
@@ -87,8 +90,8 @@ main,
 footer {
   max-width: 1180px;
   margin: auto;
-  padding-left: 28px;
-  padding-right: 28px;
+  padding-left: max(28px, env(safe-area-inset-left));
+  padding-right: max(28px, env(safe-area-inset-right));
 }
 .site-header {
   min-height: 76px;
@@ -361,7 +364,8 @@ p {
   background: var(--ink);
   color: var(--cream);
   font-size: 0.9rem;
-  display: flex;
+  display: grid;
+  grid-template-columns: 1fr auto;
   align-items: center;
   gap: 14px;
   flex-wrap: wrap;
@@ -370,6 +374,15 @@ p {
   z-index: 10;
   border-bottom: 2px solid var(--red);
 }
+.demo-banner > span {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-weight: 800;
+}
+.demo-actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
 .demo-banner button {
   min-height: 44px;
   min-width: 44px;
@@ -377,6 +390,10 @@ p {
   background: transparent;
   border: 1px solid var(--cream);
   box-shadow: none;
+}
+.demo-banner a:focus-visible,
+.demo-banner button:focus-visible {
+  outline-color: var(--cream);
 }
 .demo-head {
   padding: 64px 0 42px;
@@ -490,8 +507,8 @@ footer a,
   .site-header,
   main,
   footer {
-    padding-left: 18px;
-    padding-right: 18px;
+    padding-left: max(18px, env(safe-area-inset-left));
+    padding-right: max(18px, env(safe-area-inset-right));
   }
   .site-header {
     min-height: 68px;
@@ -539,7 +556,24 @@ footer a,
   }
   .demo-banner {
     margin: 0 -18px;
-    padding: 12px 18px;
+    padding: 8px max(18px, env(safe-area-inset-right)) 8px
+      max(18px, env(safe-area-inset-left));
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+  .demo-actions {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 8px;
+  }
+  .demo-banner button,
+  .demo-banner a {
+    padding-top: 6px;
+    padding-bottom: 6px;
+    line-height: 1.25;
+  }
+  .demo-banner a {
+    text-align: center;
   }
   .manifest-paper {
     padding: 20px;

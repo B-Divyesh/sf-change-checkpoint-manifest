@@ -25,14 +25,14 @@
     "claim": "cpc writes a checkpoint in the Git repository where you run it",
     "where": "Landing facts and README",
     "test": "npm test -- --grep @claim:runs-in-git-repository",
-    "sandbox": "fresh caller-created Git repository; create a checkpoint and assert its manifest is written below that repository"
+    "sandbox": "fresh caller-created Git repository with an untracked directory, spaces, Unicode, and a rename; record and verify the checkpoint"
   },
   {
     "id": "local-signing-key-path",
-    "claim": "The signing key is stored locally at .change-checkpoints/signing.key",
+    "claim": "The signing key is stored locally at .change-checkpoints/signing.key with owner-only Unix permissions",
     "where": "README",
     "test": "npm test -- --grep @claim:local-signing-key-path",
-    "sandbox": "fresh caller-created Git repository; create a checkpoint and assert the generated signing key path"
+    "sandbox": "fresh caller-created Git repository; create a checkpoint and assert the generated signing key path and mode 0600 on Unix"
   },
   {
     "id": "signed-manifest",
@@ -60,14 +60,21 @@
     "claim": "The local signing key is ignored by Git automatically",
     "where": "README",
     "test": "npm test -- --grep @claim:local-key-ignore",
-    "sandbox": "fresh cpc demo repository; inspect .change-checkpoints/.gitignore for signing.key"
+    "sandbox": "fresh repository with an existing unrelated ignore rule; assert /signing.key is added, the old rule remains, and git check-ignore succeeds"
   },
   {
     "id": "verify-manifest",
-    "claim": "cpc checks the signature, current Git state, saved environment checks, and selected checks",
+    "claim": "cpc checks the signature against a pinned key, checks current Git state and environment, previews commands, then reruns only after approval",
     "where": "How it works section and README",
     "test": "npm test -- --grep @claim:verify-manifest",
-    "sandbox": "fresh cpc demo repository; run cpc verify --rerun and assert a valid result"
+    "sandbox": "fresh cpc demo repository; preview exact commands without execution, then approve and assert a valid rerun"
+  },
+  {
+    "id": "trusted-signature",
+    "claim": "Verification rejects a manifest signed by a key other than the repository's pinned key and runs no recorded command",
+    "where": "How it works, Privacy page, and README",
+    "test": "npm test -- --grep @claim:trusted-signature",
+    "sandbox": "fresh demo repository; replace a command, self-sign with another Ed25519 key, request an approved rerun, and assert rejection with no marker file"
   },
   {
     "id": "restore-safe",
@@ -138,5 +145,19 @@
     "where": "README",
     "test": "npm test -- --grep @claim:runtime-requirements",
     "sandbox": "fresh checkout; invoke cargo and node version checks and assert the documented npm test script runs both toolchains"
+  },
+  {
+    "id": "portable-paths",
+    "claim": "Portable JSON and Markdown checkpoint files omit the repository's absolute path",
+    "where": "Privacy page and README",
+    "test": "npm test -- --grep @claim:portable-paths",
+    "sandbox": "fresh Git repository below a sentinel private path; create a checkpoint and assert neither portable file contains the sentinel or absolute root"
+  },
+  {
+    "id": "free-no-account",
+    "claim": "Change Checkpoints is free and open source and requires no account",
+    "where": "Landing facts and Terms page",
+    "test": "npm test -- --grep @claim:free-no-account",
+    "sandbox": "fresh browser context; assert the first-screen and Terms statements, MIT license, and absence of purchase or sign-in links"
   }
 ]

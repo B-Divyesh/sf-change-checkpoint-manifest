@@ -29,6 +29,12 @@ offset terminal slip, then collapse to one column below 720px. Corners are
 square; borders and dotted patterns establish grouping instead of generic
 rounded cards.
 
+On a 390px screen, the demo disclosure becomes a compact two-row ink strip.
+Its status occupies the first row, while Reset and exit remain 44px targets on
+the second. This keeps the sandbox boundary visible without covering the
+sample record. Safe-area insets extend the page and banner padding on notched
+screens.
+
 ## Interaction and motion
 
 The signature detail is a small halftone inspection field that reveals its
