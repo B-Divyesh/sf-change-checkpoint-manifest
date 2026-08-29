@@ -30,7 +30,7 @@ const meta = {
 const header = () =>
   `<header class="site-header"><a class="wordmark" href="/" data-route><span aria-hidden="true">●</span> Change Checkpoints</a><nav aria-label="Main navigation"><a href="/?demo=1" data-route>Demo</a><a href="/#install" data-route>Install</a><a href="/privacy" data-route>Privacy</a></nav></header>`;
 const footer = () =>
-  `<footer><p>Record checks with each Git change.</p><p><a href="/privacy" data-route>Privacy</a> · <a href="/terms" data-route>Terms</a> · Built by Param Factory · v0.1.0</p></footer>`;
+  `<footer><p>Record checks with each Git change.</p><p><a href="/privacy" data-route>Privacy</a> · <a href="/terms" data-route>Terms</a> · Built by Param Factory · v0.1.0 · Build ${__BUILD_ID__}</p></footer>`;
 const shell = (content) =>
   `${header()}<main id="main" tabindex="-1">${content}</main>${footer()}`;
 const routeLink = (url, label, style = "button") =>

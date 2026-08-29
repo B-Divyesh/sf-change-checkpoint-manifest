@@ -1,6 +1,7 @@
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { buildId } from "./build-id.mjs";
 
 const output = join(
   fileURLToPath(new URL("..", import.meta.url)),
@@ -9,6 +10,13 @@ const output = join(
   "site",
 );
 const shell = readFileSync(join(output, "index.html"), "utf8");
+const identifier = buildId();
+
+const notFoundPath = join(output, "404.html");
+writeFileSync(
+  notFoundPath,
+  readFileSync(notFoundPath, "utf8").replaceAll("__BUILD_ID__", identifier),
+);
 
 const routes = {
   demo: {

@@ -85,10 +85,10 @@
   },
   {
     "id": "optional-patch",
-    "claim": "A patch is written only with --include-diff",
+    "claim": "A patch is written only with --include-diff and includes new untracked files",
     "where": "Privacy page and README",
     "test": "npm test -- --grep @claim:optional-patch",
-    "sandbox": "fresh temporary repository; record checkpoints without and with --include-diff and inspect files"
+    "sandbox": "fresh temporary repository with a tracked edit and new untracked file; record checkpoints without and with --include-diff, inspect files, and verify the package"
   },
   {
     "id": "no-third-party-runtime",
@@ -159,5 +159,47 @@
     "where": "Landing facts and Terms page",
     "test": "npm test -- --grep @claim:free-no-account",
     "sandbox": "fresh browser context; assert the first-screen and Terms statements, MIT license, and absence of purchase or sign-in links"
+  },
+  {
+    "id": "live-build-id",
+    "claim": "Every site footer exposes the production build identifier",
+    "where": "Footer on every route",
+    "test": "npm test -- --grep @claim:live-build-id",
+    "sandbox": "fresh production site build; visit every route and assert each footer shows the current 12-character Git build identifier"
+  },
+  {
+    "id": "safe-checkpoint-outputs",
+    "claim": "Checkpoint creation never follows aliases or replaces same-name output files",
+    "where": "README record instructions",
+    "test": "npm test -- --grep @claim:safe-checkpoint-outputs",
+    "sandbox": "fresh repositories with symlinked and hard-linked outputs plus an existing checkpoint package; assert rejection before checks and unchanged target bytes"
+  },
+  {
+    "id": "safe-checkpoint-inputs",
+    "claim": "Verification rejects aliased manifest, trusted-key, and saved-patch files",
+    "where": "README verification instructions",
+    "test": "npm test -- --grep @claim:safe-checkpoint-inputs",
+    "sandbox": "fresh checkpoint repository; replace each input with a symbolic or hard-link alias and assert verification rejects it"
+  },
+  {
+    "id": "validated-environment",
+    "claim": "Invalid or mismatched environment assertions are rejected before checks run",
+    "where": "README record instructions",
+    "test": "npm test -- --grep @claim:validated-environment",
+    "sandbox": "fresh repository; pass invalid and contradictory environment assertions with a marker check and assert rejection without the marker"
+  },
+  {
+    "id": "json-errors",
+    "claim": "JSON mode returns argument and operation errors as JSON objects",
+    "where": "README verification instructions",
+    "test": "npm test -- --grep @claim:json-errors",
+    "sandbox": "fresh Git and non-Git directories; trigger validation, Git, and argument errors and parse every stdout response as structured JSON"
+  },
+  {
+    "id": "post-check-state",
+    "claim": "A checkpoint records Git state after its selected checks finish",
+    "where": "README record instructions",
+    "test": "npm test -- --grep @claim:post-check-state",
+    "sandbox": "fresh repository; run a successful check that changes a tracked file and assert the new checkpoint verifies immediately"
   }
 ]

@@ -1,9 +1,9 @@
 {
   "version": 2,
   "reviewed_sources": {
-    "README.md": "99b1842513892f0c432ed23fd7364eae13330bcb0eb6a916ca5f64a6af3cfd95",
-    "site/src/main.js": "d292be439c343c2806fa2b451fc32429b5eb758c8ff70a0bcd32c7a1d1368ce9",
-    "site/public/404.html": "2cb5df03b295f93f4dcea5f480952efb278cb70f3588cc6d10c17b40e3926eef",
+    "README.md": "648cd553784ebdbd51af740386ee3a03aa31eadd284ae15b9145b0f0daea450e",
+    "site/src/main.js": "bb9db60febcc73892038622f8c074d2aa9c5724ac40e39788b46c1741fe1e9d4",
+    "site/public/404.html": "75771bac1c0460857a9f05b40b3a2eaee3189dfb9e970a8dcba20d89603edb73",
     "site/index.html": "d5b6b05b5dbb13c6d7c4e61243d5234c852b6e7c46c805be9eee60ecd2eeb39a"
   },
   "statements": [
@@ -11,21 +11,28 @@
     { "source": "README.md", "text": "The CLI records Git state and each selected command's exit status.", "claim": "checkpoint-record" },
     { "source": "README.md", "text": "It does not save command output or raw environment values.", "claim": "no-command-output" },
     { "source": "README.md", "text": "An optional patch is written only when you ask for it.", "claim": "optional-patch" },
+    { "source": "README.md", "text": "Git state is captured after the selected checks finish.", "claim": "post-check-state" },
     { "source": "README.md", "text": "Clone the public source, then install the CLI locally:", "claim": "install-from-source" },
     { "source": "README.md", "text": "Run this inside a Git repository.", "claim": "runs-in-git-repository" },
+    { "source": "README.md", "text": "An explicit `NAME=value` environment assertion must match the current value.", "claim": "validated-environment" },
+    { "source": "README.md", "text": "Invalid or mismatched assertions are rejected before any check runs.", "claim": "validated-environment" },
     { "source": "README.md", "text": "This writes `.change-checkpoints/auth-timeout.json` and a Markdown summary beside it.", "claim": "markdown-summary" },
     { "source": "README.md", "text": "These portable files do not contain the repository's absolute path.", "claim": "portable-paths" },
+    { "source": "README.md", "text": "Checkpoint names are create-only and never replace existing checkpoint files.", "claim": "safe-checkpoint-outputs" },
     { "source": "README.md", "text": "The JSON uses an Ed25519 signing key at `.change-checkpoints/signing.key`.", "claim": "signed-manifest" },
     { "source": "README.md", "text": "The key has owner-only permissions on Unix.", "claim": "local-signing-key-path" },
     { "source": "README.md", "text": "The command adds `/signing.key` to `.change-checkpoints/.gitignore` without removing existing rules.", "claim": "local-key-ignore" },
     { "source": "README.md", "text": "The matching public key is pinned outside the manifest under `.git`.", "claim": "trusted-signature" },
     { "source": "README.md", "text": "A copy at `.change-checkpoints/signing.pub` can be shared through a channel you trust.", "claim": "trusted-signature" },
     { "source": "README.md", "text": "Verification rejects a manifest signed by any other key.", "claim": "trusted-signature" },
+    { "source": "README.md", "text": "The patch includes tracked changes and new untracked files.", "claim": "optional-patch" },
     { "source": "README.md", "text": "First inspect the current checkout and the exact recorded commands:", "claim": "verify-manifest" },
     { "source": "README.md", "text": "That command does not run the checks.", "claim": "verify-manifest" },
     { "source": "README.md", "text": "Approve those exact commands separately:", "claim": "verify-manifest" },
     { "source": "README.md", "text": "`restore` checks trust and current state before it shows the rollback note.", "claim": "restore-safe" },
     { "source": "README.md", "text": "It never executes the rollback note.", "claim": "restore-safe" },
+    { "source": "README.md", "text": "Manifest, trusted-key, and saved-patch inputs must be regular, unaliased files.", "claim": "safe-checkpoint-inputs" },
+    { "source": "README.md", "text": "With `--json`, argument and operation errors are returned as JSON objects.", "claim": "json-errors" },
     { "source": "README.md", "text": "The demo makes an isolated temporary Git repository, records a changed Rust file with two checks, and prints its manifest path.", "claim": "cli-demo-isolated" },
     { "source": "README.md", "text": "The web version opens at `/?demo=1` (or `/demo`) and stores only `demo:change-checkpoints:state` in the browser.", "claim": "demo-sandbox" },
     { "source": "README.md", "text": "Selecting **Leave demo and view install steps** clears that sample key.", "claim": "web-storage" },
@@ -50,6 +57,8 @@
     { "source": "site/src/main.js", "text": "An optional patch can contain source changes.", "claim": "optional-patch" },
     { "source": "site/src/main.js", "text": "The regular website stores nothing in your browser.", "claim": "web-storage" },
     { "source": "site/src/main.js", "text": "Change Checkpoints is free, open-source software under the MIT License.", "claim": "mit-license" },
-    { "source": "site/src/main.js", "text": "It needs no account.", "claim": "free-no-account" }
+    { "source": "site/src/main.js", "text": "It needs no account.", "claim": "free-no-account" },
+    { "source": "site/src/main.js", "text": "Build ${__BUILD_ID__}", "claim": "live-build-id" },
+    { "source": "site/public/404.html", "text": "Build __BUILD_ID__", "claim": "live-build-id" }
   ]
 }

@@ -5,9 +5,10 @@ use rand::rngs::OsRng;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::{
+    collections::HashSet,
     env, fs,
-    fs::OpenOptions,
-    io::{self, Write},
+    fs::{File, OpenOptions},
+    io::{self, Read, Write},
     path::{Path, PathBuf},
     process::{Command, ExitCode},
     time::{Instant, SystemTime, UNIX_EPOCH},
@@ -110,13 +111,13 @@ struct Repository {
     head: String,
     branch: String,
 }
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, PartialEq, Eq)]
 struct Workspace {
     status: String,
     diff_sha256: String,
     untracked: Vec<Artifact>,
 }
-#[derive(Serialize, Deserialize, Clone, PartialEq, Eq)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 struct Artifact {
     path: String,
     sha256: String,
@@ -153,13 +154,83 @@ struct StatusEntry {
     original_path: Option<String>,
 }
 
+#[derive(Debug, PartialEq, Eq)]
+struct WorkspaceSnapshot {
+    status: String,
+    tracked_diff: Vec<u8>,
+    untracked: Vec<Artifact>,
+    exact_patch: Option<Vec<u8>>,
+}
+
 fn main() -> ExitCode {
-    match run(Cli::parse()) {
+    let json_requested = env::args_os().any(|argument| argument == "--json");
+    let cli = match Cli::try_parse() {
+        Ok(cli) => cli,
+        Err(error) => {
+            if json_requested {
+                print_json_error("invalid_arguments", &error.to_string());
+            } else {
+                let _ = error.print();
+            }
+            return ExitCode::from(2);
+        }
+    };
+    let json_requested = cli.json_requested();
+    match run(cli) {
         Ok(code) => ExitCode::from(code),
         Err(error) => {
-            eprintln!("cpc: {error}");
+            if json_requested {
+                print_json_error(error_code(&error), &error);
+            } else {
+                eprintln!("cpc: {error}");
+            }
             ExitCode::from(1)
         }
+    }
+}
+
+impl Cli {
+    fn json_requested(&self) -> bool {
+        match &self.command {
+            Commands::Checkpoint { json, .. }
+            | Commands::Verify { json, .. }
+            | Commands::Restore { json, .. }
+            | Commands::Demo { json } => *json,
+        }
+    }
+}
+
+fn print_json_error(code: &str, message: &str) {
+    println!(
+        "{}",
+        serde_json::json!({
+            "ok": false,
+            "error": {"code": code, "message": message.trim()}
+        })
+    );
+}
+
+fn error_code(message: &str) -> &'static str {
+    if message.contains("environment") {
+        "invalid_environment"
+    } else if message.contains("name may contain") {
+        "invalid_name"
+    } else if message.contains("not a git repository") {
+        "git_required"
+    } else if message.contains("checkpoint output")
+        || message.contains("checkpoint name already exists")
+    {
+        "output_conflict"
+    } else if message.contains("must be a regular file")
+        || message.contains("must not alias another file")
+    {
+        "unsafe_path"
+    } else if message.contains("manifest") {
+        "invalid_manifest"
+    } else if message.contains("trusted public key") {
+        "invalid_trusted_key"
+    } else {
+        "operation_failed"
     }
 }
 
@@ -215,32 +286,33 @@ fn checkpoint(
     if rollback.trim().is_empty() {
         return Err("--rollback needs a specific rollback instruction".into());
     }
+    let env_assertions = parse_environment_inputs(environment)?;
     let root = git_root()?;
     let head = git(&root, ["rev-parse", "HEAD"])?;
     let branch = git(&root, ["branch", "--show-current"]).unwrap_or_else(|_| "DETACHED".into());
-    let (status, untracked) = workspace_state(&root)?;
-    let diff = git_bytes(&root, ["diff", "--binary", "HEAD"])?;
+    let directory = prepare_checkpoint_directory(&root)?;
+    let json_path = directory.join(format!("{name}.json"));
+    let markdown_path = directory.join(format!("{name}.md"));
+    let patch_path = directory.join(format!("{name}.patch"));
+    reject_existing_checkpoint_outputs([&json_path, &markdown_path, &patch_path])?;
+    let key = load_or_make_key(&root, &directory)?;
     let runs = commands
         .iter()
         .map(|command| run_check(&root, command))
         .collect::<Vec<_>>();
-    let env_assertions = environment
-        .iter()
-        .map(|value| parse_environment(value))
-        .collect::<Result<Vec<_>, _>>()?;
-    let directory = root.join(".change-checkpoints");
-    fs::create_dir_all(&directory).map_err(io_error)?;
+    let snapshot = capture_stable_workspace(&root, include_diff)?;
     let patch = if include_diff {
-        let path = directory.join(format!("{name}.patch"));
-        fs::write(&path, &diff).map_err(io_error)?;
+        let bytes = snapshot
+            .exact_patch
+            .as_ref()
+            .expect("requested snapshots include a patch");
         Some(Patch {
-            path: relative(&root, &path),
-            sha256: hash(&diff),
+            path: relative(&root, &patch_path),
+            sha256: hash(bytes),
         })
     } else {
         None
     };
-    let key = load_or_make_key(&root, &directory)?;
     let public = B64.encode(key.verifying_key().to_bytes());
     let mut manifest = Manifest {
         format: "change-checkpoints/v1".into(),
@@ -254,9 +326,9 @@ fn checkpoint(
             branch: branch.trim().into(),
         },
         workspace: Workspace {
-            status: status.trim_end().into(),
-            diff_sha256: hash(&diff),
-            untracked,
+            status: snapshot.status.clone(),
+            diff_sha256: hash(&snapshot.tracked_diff),
+            untracked: snapshot.untracked.clone(),
         },
         checks: runs,
         environment: env_assertions,
@@ -270,14 +342,20 @@ fn checkpoint(
     };
     let payload = unsigned_bytes(&manifest)?;
     manifest.signature.value = B64.encode(key.sign(&payload).to_bytes());
-    let json_path = directory.join(format!("{name}.json"));
-    let markdown_path = directory.join(format!("{name}.md"));
-    fs::write(
-        &json_path,
-        serde_json::to_vec_pretty(&manifest).map_err(|e| e.to_string())?,
-    )
-    .map_err(io_error)?;
-    fs::write(&markdown_path, render_markdown(&manifest)).map_err(io_error)?;
+    let mut outputs = vec![
+        (
+            json_path.as_path(),
+            serde_json::to_vec_pretty(&manifest).map_err(|e| e.to_string())?,
+        ),
+        (
+            markdown_path.as_path(),
+            render_markdown(&manifest).into_bytes(),
+        ),
+    ];
+    if let Some(bytes) = snapshot.exact_patch {
+        outputs.push((patch_path.as_path(), bytes));
+    }
+    write_new_checkpoint_outputs(outputs)?;
     if json {
         println!(
             "{}",
@@ -391,17 +469,8 @@ fn verification_findings(
             head.trim()
         ));
     }
-    let diff = git_bytes(&root, ["diff", "--binary", "HEAD"])?;
-    if hash(&diff) != manifest.workspace.diff_sha256 {
-        findings.push("working-tree diff differs".into());
-    }
-    let (status, untracked) = workspace_state(&root)?;
-    if status.trim_end() != manifest.workspace.status {
-        findings.push("workspace status differs".into());
-    }
-    if untracked != manifest.workspace.untracked {
-        findings.push("untracked artifact fingerprints differ".into());
-    }
+    append_workspace_findings(&root, manifest, &mut findings)?;
+    append_patch_artifact_findings(&root, manifest, &mut findings);
     for assertion in &manifest.environment {
         let current = env::var(&assertion.name).ok();
         if current.is_some() != assertion.present
@@ -417,8 +486,67 @@ fn verification_findings(
                 findings.push(format!("check exit differs: {}", check.command));
             }
         }
+        append_workspace_findings(&root, manifest, &mut findings)?;
+        append_patch_artifact_findings(&root, manifest, &mut findings);
     }
     Ok(findings)
+}
+
+fn append_patch_artifact_findings(root: &Path, manifest: &Manifest, findings: &mut Vec<String>) {
+    let Some(saved) = &manifest.patch else {
+        return;
+    };
+    let expected = format!(".change-checkpoints/{}.patch", manifest.name);
+    if saved.path != expected {
+        push_finding(findings, true, "saved patch path is invalid");
+        return;
+    }
+    let path = root.join(&saved.path);
+    match read_regular_file(&path, "saved patch") {
+        Ok(bytes) => push_finding(
+            findings,
+            hash(&bytes) != saved.sha256,
+            "saved patch artifact differs",
+        ),
+        Err(error) => push_finding(findings, true, &error),
+    }
+}
+
+fn append_workspace_findings(
+    root: &Path,
+    manifest: &Manifest,
+    findings: &mut Vec<String>,
+) -> Result<(), String> {
+    let snapshot = capture_workspace(root, manifest.patch.is_some())?;
+    push_finding(
+        findings,
+        hash(&snapshot.tracked_diff) != manifest.workspace.diff_sha256,
+        "working-tree diff differs",
+    );
+    push_finding(
+        findings,
+        snapshot.status != manifest.workspace.status,
+        "workspace status differs",
+    );
+    push_finding(
+        findings,
+        snapshot.untracked != manifest.workspace.untracked,
+        "untracked artifact fingerprints differ",
+    );
+    if let (Some(saved), Some(current)) = (&manifest.patch, snapshot.exact_patch) {
+        push_finding(
+            findings,
+            hash(&current) != saved.sha256,
+            "exact working-tree patch differs",
+        );
+    }
+    Ok(())
+}
+
+fn push_finding(findings: &mut Vec<String>, differs: bool, finding: &str) {
+    if differs && !findings.iter().any(|current| current == finding) {
+        findings.push(finding.into());
+    }
 }
 
 fn restore(
@@ -601,20 +729,113 @@ fn is_environment_dependent(command: &str) -> bool {
 }
 fn parse_environment(value: &str) -> Result<EnvironmentAssertion, String> {
     let (name, given) = value.split_once('=').unwrap_or((value, ""));
-    if name.is_empty() || !name.chars().all(|c| c.is_ascii_alphanumeric() || c == '_') {
+    let mut characters = name.chars();
+    if !matches!(characters.next(), Some(first) if first.is_ascii_alphabetic() || first == '_')
+        || !characters.all(|character| character.is_ascii_alphanumeric() || character == '_')
+    {
         return Err(format!("invalid environment name: {name}"));
     }
-    let actual = if value.contains('=') {
-        Some(given.to_owned())
-    } else {
-        env::var(name).ok()
-    };
+    let current = env::var(name).ok();
+    if value.contains('=') && current.as_deref() != Some(given) {
+        return Err(format!(
+            "environment assertion does not match the current value: {name}"
+        ));
+    }
     Ok(EnvironmentAssertion {
         name: name.into(),
-        present: actual.is_some(),
-        value_sha256: actual.as_ref().map(|s| hash(s.as_bytes())),
+        present: current.is_some(),
+        value_sha256: current.as_ref().map(|item| hash(item.as_bytes())),
     })
 }
+
+fn parse_environment_inputs(values: &[String]) -> Result<Vec<EnvironmentAssertion>, String> {
+    let mut names = HashSet::new();
+    values
+        .iter()
+        .map(|value| {
+            let assertion = parse_environment(value)?;
+            if !names.insert(assertion.name.clone()) {
+                return Err(format!(
+                    "environment assertion is repeated: {}",
+                    assertion.name
+                ));
+            }
+            Ok(assertion)
+        })
+        .collect()
+}
+
+fn capture_stable_workspace(root: &Path, include_patch: bool) -> Result<WorkspaceSnapshot, String> {
+    let snapshot = capture_workspace(root, include_patch)?;
+    let confirmed = capture_workspace(root, include_patch)?;
+    if snapshot != confirmed {
+        return Err(
+            "workspace changed while Git state was being recorded; rerun the checkpoint".into(),
+        );
+    }
+    Ok(snapshot)
+}
+
+fn capture_workspace(root: &Path, include_patch: bool) -> Result<WorkspaceSnapshot, String> {
+    let tracked_diff = git_bytes(root, ["diff", "--binary", "HEAD"])?;
+    let (status, untracked) = workspace_state(root)?;
+    let exact_patch = if include_patch {
+        Some(exact_working_tree_patch(root)?)
+    } else {
+        None
+    };
+    Ok(WorkspaceSnapshot {
+        status,
+        tracked_diff,
+        untracked,
+        exact_patch,
+    })
+}
+
+fn exact_working_tree_patch(root: &Path) -> Result<Vec<u8>, String> {
+    use rand::RngCore;
+    let mut random = [0_u8; 16];
+    OsRng.fill_bytes(&mut random);
+    let temporary_index = env::temp_dir().join(format!("cpc-index-{}", hash(&random)));
+    let run = |arguments: &[&str]| {
+        Command::new("git")
+            .args(arguments)
+            .current_dir(root)
+            .env("GIT_INDEX_FILE", &temporary_index)
+            .output()
+            .map_err(io_error)
+    };
+    let result = (|| {
+        let read_tree = run(&["read-tree", "HEAD"])?;
+        if !read_tree.status.success() {
+            return Err(String::from_utf8_lossy(&read_tree.stderr)
+                .trim()
+                .to_string());
+        }
+        let add = run(&[
+            "add",
+            "-A",
+            "--",
+            ".",
+            ":(exclude).change-checkpoints",
+            ":(exclude).change-checkpoints/**",
+        ])?;
+        if !add.status.success() {
+            return Err(String::from_utf8_lossy(&add.stderr).trim().to_string());
+        }
+        let diff = run(&["diff", "--cached", "--binary", "HEAD"])?;
+        if diff.status.success() {
+            Ok(diff.stdout)
+        } else {
+            Err(String::from_utf8_lossy(&diff.stderr).trim().to_string())
+        }
+    })();
+    let _ = fs::remove_file(&temporary_index);
+    let lock = temporary_index.with_extension("lock");
+    let _ = fs::remove_file(lock);
+    result
+}
+
 fn workspace_state(root: &Path) -> Result<(String, Vec<Artifact>), String> {
     let raw = git_bytes(
         root,
@@ -645,7 +866,7 @@ fn workspace_state(root: &Path) -> Result<(String, Vec<Artifact>), String> {
         .filter(|entry| entry.code == "??")
         .map(|entry| {
             let path = root.join(&entry.path);
-            let metadata = fs::metadata(&path).map_err(io_error)?;
+            let metadata = fs::symlink_metadata(&path).map_err(io_error)?;
             if !metadata.is_file() {
                 return Err(format!(
                     "untracked path is not a regular file: {}",
@@ -704,10 +925,202 @@ fn is_checkpoint_path(path: &str) -> bool {
         || path.starts_with(".change-checkpoints\\")
 }
 
+fn prepare_checkpoint_directory(root: &Path) -> Result<PathBuf, String> {
+    let directory = root.join(".change-checkpoints");
+    match fs::symlink_metadata(&directory) {
+        Ok(metadata) => {
+            if metadata.file_type().is_symlink() || !metadata.is_dir() {
+                return Err(format!(
+                    "checkpoint output directory must be a real directory: {}",
+                    directory.display()
+                ));
+            }
+        }
+        Err(error) if error.kind() == io::ErrorKind::NotFound => {
+            fs::create_dir(&directory).map_err(io_error)?;
+        }
+        Err(error) => return Err(io_error(error)),
+    }
+    let canonical_root = fs::canonicalize(root).map_err(io_error)?;
+    let canonical_directory = fs::canonicalize(&directory).map_err(io_error)?;
+    if canonical_directory.parent() != Some(canonical_root.as_path()) {
+        return Err(format!(
+            "checkpoint output directory resolves outside the repository: {}",
+            directory.display()
+        ));
+    }
+    Ok(directory)
+}
+
+fn reject_existing_checkpoint_outputs<const N: usize>(paths: [&Path; N]) -> Result<(), String> {
+    for path in paths {
+        match fs::symlink_metadata(path) {
+            Ok(metadata) => {
+                if metadata.file_type().is_symlink() {
+                    return Err(format!(
+                        "checkpoint output must not be a symlink: {}",
+                        path.display()
+                    ));
+                }
+                return Err(format!(
+                    "checkpoint name already exists; choose another name: {}",
+                    path.display()
+                ));
+            }
+            Err(error) if error.kind() == io::ErrorKind::NotFound => {}
+            Err(error) => return Err(io_error(error)),
+        }
+    }
+    Ok(())
+}
+
+fn write_new_checkpoint_outputs(outputs: Vec<(&Path, Vec<u8>)>) -> Result<(), String> {
+    let mut files: Vec<(PathBuf, File, Vec<u8>)> = Vec::new();
+    for (path, bytes) in outputs {
+        match OpenOptions::new().write(true).create_new(true).open(path) {
+            Ok(file) => files.push((path.to_path_buf(), file, bytes)),
+            Err(error) => {
+                cleanup_created_outputs(&files);
+                return Err(format!(
+                    "checkpoint output appeared before it could be written: {} ({})",
+                    path.display(),
+                    error
+                ));
+            }
+        }
+    }
+    let write_result = files
+        .iter_mut()
+        .try_for_each(|(_, file, bytes)| file.write_all(bytes).and_then(|_| file.sync_all()));
+    if let Err(error) = write_result {
+        cleanup_created_outputs(&files);
+        return Err(io_error(error));
+    }
+    let validation_result = files.iter().try_for_each(|(path, file, _)| {
+        let opened = file.metadata().map_err(io_error)?;
+        let current = fs::symlink_metadata(path).map_err(io_error)?;
+        if same_file(&opened, &current) {
+            Ok(())
+        } else {
+            Err(format!(
+                "checkpoint output changed while it was being written: {}",
+                path.display()
+            ))
+        }
+    });
+    if let Err(error) = validation_result {
+        cleanup_created_outputs(&files);
+        return Err(error);
+    }
+    Ok(())
+}
+
+fn cleanup_created_outputs(files: &[(PathBuf, File, Vec<u8>)]) {
+    for (path, file, _) in files {
+        let opened = file.metadata();
+        let current = fs::symlink_metadata(path);
+        if matches!((opened, current), (Ok(left), Ok(right)) if same_identity(&left, &right)) {
+            let _ = fs::remove_file(path);
+        }
+    }
+}
+
+fn validate_regular_unaliased(path: &Path, label: &str) -> Result<(), String> {
+    let metadata = fs::symlink_metadata(path).map_err(io_error)?;
+    if metadata.file_type().is_symlink() || !metadata.is_file() {
+        return Err(format!(
+            "{label} must be a regular file: {}",
+            path.display()
+        ));
+    }
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::MetadataExt;
+        if metadata.nlink() != 1 {
+            return Err(format!(
+                "{label} must not alias another file: {}",
+                path.display()
+            ));
+        }
+    }
+    Ok(())
+}
+
+fn read_regular_file(path: &Path, label: &str) -> Result<Vec<u8>, String> {
+    validate_regular_unaliased(path, label)?;
+    let mut file = File::open(path).map_err(io_error)?;
+    let opened = file.metadata().map_err(io_error)?;
+    let current = fs::symlink_metadata(path).map_err(io_error)?;
+    if !same_file(&opened, &current) {
+        return Err(format!(
+            "{label} changed while it was being opened: {}",
+            path.display()
+        ));
+    }
+    let mut bytes = Vec::new();
+    file.read_to_end(&mut bytes).map_err(io_error)?;
+    let finished = fs::symlink_metadata(path).map_err(io_error)?;
+    if !same_file(&opened, &finished) {
+        return Err(format!(
+            "{label} changed while it was being read: {}",
+            path.display()
+        ));
+    }
+    Ok(bytes)
+}
+
+#[cfg(unix)]
+fn same_file(left: &fs::Metadata, right: &fs::Metadata) -> bool {
+    use std::os::unix::fs::MetadataExt;
+    same_identity(left, right) && right.nlink() == 1
+}
+
+#[cfg(not(unix))]
+fn same_file(left: &fs::Metadata, right: &fs::Metadata) -> bool {
+    same_identity(left, right)
+}
+
+#[cfg(unix)]
+fn same_identity(left: &fs::Metadata, right: &fs::Metadata) -> bool {
+    use std::os::unix::fs::MetadataExt;
+    left.dev() == right.dev() && left.ino() == right.ino()
+}
+
+#[cfg(not(unix))]
+fn same_identity(left: &fs::Metadata, right: &fs::Metadata) -> bool {
+    left.is_file() && right.is_file() && left.len() == right.len()
+}
+
+fn replace_regular_file(path: &Path, bytes: &[u8], label: &str) -> Result<(), String> {
+    validate_regular_unaliased(path, label)?;
+    let parent = path
+        .parent()
+        .ok_or_else(|| format!("invalid output path: {}", path.display()))?;
+    let mut random = [0_u8; 16];
+    use rand::RngCore;
+    OsRng.fill_bytes(&mut random);
+    let temporary = parent.join(format!(".cpc-write-{}", hash(&random)));
+    let mut file = OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .open(&temporary)
+        .map_err(io_error)?;
+    if let Err(error) = file.write_all(bytes).and_then(|_| file.sync_all()) {
+        let _ = fs::remove_file(&temporary);
+        return Err(io_error(error));
+    }
+    drop(file);
+    fs::rename(&temporary, path).map_err(|error| {
+        let _ = fs::remove_file(&temporary);
+        io_error(error)
+    })
+}
+
 fn load_or_make_key(root: &Path, directory: &Path) -> Result<SigningKey, String> {
     ensure_key_ignore(root, directory)?;
     let path = directory.join("signing.key");
-    let key = if path.exists() {
+    let key = if fs::symlink_metadata(&path).is_ok() {
+        validate_regular_unaliased(&path, "local signing key")?;
         restrict_private_key(&path)?;
         let bytes = fs::read(&path).map_err(io_error)?;
         let data: [u8; 32] = bytes
@@ -727,7 +1140,8 @@ fn load_or_make_key(root: &Path, directory: &Path) -> Result<SigningKey, String>
 
 fn ensure_key_ignore(root: &Path, directory: &Path) -> Result<(), String> {
     let ignore = directory.join(".gitignore");
-    let mut contents = if ignore.exists() {
+    let mut contents = if fs::symlink_metadata(&ignore).is_ok() {
+        validate_regular_unaliased(&ignore, "checkpoint ignore file")?;
         fs::read_to_string(&ignore).map_err(io_error)?
     } else {
         String::new()
@@ -737,7 +1151,11 @@ fn ensure_key_ignore(root: &Path, directory: &Path) -> Result<(), String> {
             contents.push('\n');
         }
         contents.push_str("/signing.key\n");
-        fs::write(&ignore, contents).map_err(io_error)?;
+        if fs::symlink_metadata(&ignore).is_ok() {
+            replace_regular_file(&ignore, contents.as_bytes(), "checkpoint ignore file")?;
+        } else {
+            write_new_file(&ignore, contents.as_bytes())?;
+        }
     }
     let ignored = Command::new("git")
         .args([
@@ -768,6 +1186,16 @@ fn write_private_key(path: &Path, bytes: &[u8]) -> Result<(), String> {
     restrict_private_key(path)
 }
 
+fn write_new_file(path: &Path, bytes: &[u8]) -> Result<(), String> {
+    let mut file = OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .open(path)
+        .map_err(io_error)?;
+    file.write_all(bytes).map_err(io_error)?;
+    file.sync_all().map_err(io_error)
+}
+
 fn restrict_private_key(path: &Path) -> Result<(), String> {
     #[cfg(unix)]
     {
@@ -787,7 +1215,8 @@ fn pin_public_key(root: &Path, directory: &Path, public: &str) -> Result<(), Str
 }
 
 fn ensure_key_matches_or_write(path: &Path, public: &str, label: &str) -> Result<(), String> {
-    if path.exists() {
+    if fs::symlink_metadata(path).is_ok() {
+        validate_regular_unaliased(path, label)?;
         if fs::read_to_string(path).map_err(io_error)?.trim() != public {
             return Err(format!(
                 "the signing key does not match the {label} at {}",
@@ -795,7 +1224,7 @@ fn ensure_key_matches_or_write(path: &Path, public: &str, label: &str) -> Result
             ));
         }
     } else {
-        fs::write(path, format!("{public}\n")).map_err(io_error)?;
+        write_new_file(path, format!("{public}\n").as_bytes())?;
     }
     Ok(())
 }
@@ -817,13 +1246,14 @@ fn read_trusted_key(root: &Path, provided: Option<&Path>) -> Result<VerifyingKey
         .map(PathBuf::from)
         .map(Ok)
         .unwrap_or_else(|| local_trusted_key_path(root))?;
-    if !path.exists() {
+    if fs::symlink_metadata(&path).is_err() {
         return Err(format!(
             "trusted public key is unavailable at {}; use --trusted-key with a key obtained from a trusted source",
             path.display()
         ));
     }
-    let encoded = fs::read_to_string(&path).map_err(io_error)?;
+    let encoded = String::from_utf8(read_regular_file(&path, "trusted public key")?)
+        .map_err(|_| format!("trusted public key is invalid: {}", path.display()))?;
     let decoded = B64
         .decode(encoded.trim())
         .map_err(|_| format!("trusted public key is invalid: {}", path.display()))?;
@@ -861,7 +1291,7 @@ fn signature_valid(manifest: &Manifest, trusted: &VerifyingKey) -> Result<bool, 
     Ok(verifying.verify(&unsigned_bytes(manifest)?, &sig).is_ok())
 }
 fn read_manifest(path: &Path) -> Result<Manifest, String> {
-    serde_json::from_slice(&fs::read(path).map_err(io_error)?)
+    serde_json::from_slice(&read_regular_file(path, "manifest input")?)
         .map_err(|e| format!("could not parse manifest: {e}"))
 }
 fn render_markdown(manifest: &Manifest) -> String {
@@ -915,8 +1345,10 @@ mod tests {
     use super::*;
     #[test]
     fn environment_values_are_hashed_not_stored() {
-        let assertion = parse_environment("TOKEN=not-a-secret").unwrap();
-        assert_eq!(assertion.name, "TOKEN");
+        env::set_var("CPC_TEST_SECRET_VALUE", "not-a-secret");
+        let assertion = parse_environment("CPC_TEST_SECRET_VALUE=not-a-secret").unwrap();
+        env::remove_var("CPC_TEST_SECRET_VALUE");
+        assert_eq!(assertion.name, "CPC_TEST_SECRET_VALUE");
         assert_ne!(assertion.value_sha256.unwrap(), "not-a-secret");
     }
     #[test]

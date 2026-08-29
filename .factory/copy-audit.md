@@ -1,10 +1,10 @@
-# Copy audit — polish 4
+# Copy audit — repair 3
 
 Catalog description (83 characters): **Record Git changes, check results, and
 rollback notes in trusted local checkpoints.** It begins with a verb and stays
 below the 120-character limit.
 
-Every visitor-facing source was reviewed after the trust and privacy rewrite.
+Every visitor-facing source was reviewed after the checkpoint safety repair.
 No sentence exceeds 22 words. A case-insensitive scan of the landing page,
 README, and catalog description found none of the banned marketing words.
 Commands and sample manifest values are executable input or data, so they are
@@ -50,6 +50,7 @@ not counted as prose.
 | Terms | 1 | Pass |
 | Built by Param Factory | 4 | Pass |
 | v0.1.0 | 1 | Pass |
+| Build + 12-character Git identifier | 3 | Pass |
 
 The first screen states the job, audience, next result, local behavior, stored
 data boundary, price, and account requirement. The former untrusted-signature
@@ -58,7 +59,7 @@ promise and the decorative “Clear boundary” label are absent.
 ## Other public copy
 
 Demo, Privacy, Terms, 404, and README prose were checked with the same rules.
-Their longest sentence is the 21-word CLI-demo description in README. The
+New safety and JSON-mode sentences contain no more than 12 words. The
 sentence-level claim map in `.factory/public-claims.json` pins reviewed source
 digests, so a public-copy change fails the contract test until it is reviewed.
 

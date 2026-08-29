@@ -1,7 +1,10 @@
 import { defineConfig } from "vite";
+import { buildId } from "./scripts/build-id.mjs";
+
 export default defineConfig({
   root: new URL(".", import.meta.url).pathname,
   publicDir: "public",
+  define: { __BUILD_ID__: JSON.stringify(buildId()) },
   build: {
     outDir: "../dist/site",
     emptyOutDir: true,

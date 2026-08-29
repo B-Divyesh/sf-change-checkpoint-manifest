@@ -8,11 +8,40 @@ import {
   readFileSync,
   writeFileSync,
   mkdirSync,
+  linkSync,
   statSync,
+  symlinkSync,
   unlinkSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+
+const projectManifest = join(process.cwd(), "Cargo.toml");
+
+function makeGitRepository(prefix = "cpc-regression-") {
+  const repo = mkdtempSync(join(tmpdir(), prefix));
+  writeFileSync(join(repo, "tracked.txt"), "base\n");
+  for (const args of [
+    ["init"],
+    ["config", "user.email", "test@example.invalid"],
+    ["config", "user.name", "Test"],
+    ["add", "."],
+    ["commit", "-m", "base"],
+  ]) execFileSync("git", args, { cwd: repo });
+  return repo;
+}
+
+function runCpc(repo, args, environment = {}) {
+  return spawnSync(
+    "cargo",
+    ["run", "--manifest-path", projectManifest, "--quiet", "--", ...args],
+    {
+      cwd: repo,
+      encoding: "utf8",
+      env: { ...process.env, ...environment },
+    },
+  );
+}
 
 test("@claim:demo-sandbox @claim:web-storage the query-string demo uses isolated storage and clears it on exit", async ({
   page,
@@ -54,6 +83,163 @@ test("@claim:demo-sandbox @claim:web-storage the query-string demo uses isolated
     .click();
   await expect(page).toHaveURL(/\/#install$/);
   expect(await page.evaluate(() => Object.keys(localStorage))).toEqual(["real:sentinel"]);
+});
+
+test("@claim:safe-checkpoint-outputs checkpoint creation rejects symlinked, aliased, and stale outputs before checks run", () => {
+  const symlinkRepo = makeGitRepository("cpc-output-symlink-");
+  mkdirSync(join(symlinkRepo, ".change-checkpoints"));
+  writeFileSync(join(symlinkRepo, "victim.txt"), "DO NOT OVERWRITE\n");
+  symlinkSync("../victim.txt", join(symlinkRepo, ".change-checkpoints", "trap.json"));
+  const symlinkResult = runCpc(symlinkRepo, [
+    "checkpoint", "trap", "--check", "touch command-ran", "--rollback",
+    "git restore victim.txt", "--json",
+  ]);
+  expect(symlinkResult.status).toBe(1);
+  expect(JSON.parse(symlinkResult.stdout)).toMatchObject({
+    ok: false,
+    error: { code: "output_conflict" },
+  });
+  expect(readFileSync(join(symlinkRepo, "victim.txt"), "utf8")).toBe("DO NOT OVERWRITE\n");
+  expect(existsSync(join(symlinkRepo, "command-ran"))).toBe(false);
+
+  const aliasRepo = makeGitRepository("cpc-output-alias-");
+  mkdirSync(join(aliasRepo, ".change-checkpoints"));
+  writeFileSync(join(aliasRepo, "victim.txt"), "KEEP THIS\n");
+  linkSync(join(aliasRepo, "victim.txt"), join(aliasRepo, ".change-checkpoints", "alias.md"));
+  const aliasResult = runCpc(aliasRepo, [
+    "checkpoint", "alias", "--check", "touch command-ran", "--rollback",
+    "git restore victim.txt", "--json",
+  ]);
+  expect(aliasResult.status).toBe(1);
+  expect(JSON.parse(aliasResult.stdout).error.code).toBe("output_conflict");
+  expect(readFileSync(join(aliasRepo, "victim.txt"), "utf8")).toBe("KEEP THIS\n");
+  expect(existsSync(join(aliasRepo, "command-ran"))).toBe(false);
+
+  const staleRepo = makeGitRepository("cpc-stale-output-");
+  writeFileSync(join(staleRepo, "tracked.txt"), "first change\n");
+  const first = runCpc(staleRepo, [
+    "checkpoint", "same-name", "--check", "true", "--rollback",
+    "git restore tracked.txt", "--include-diff", "--json",
+  ]);
+  expect(first.status).toBe(0);
+  const outputDirectory = join(staleRepo, ".change-checkpoints");
+  const before = Object.fromEntries(
+    ["json", "md", "patch"].map((extension) => [
+      extension,
+      readFileSync(join(outputDirectory, `same-name.${extension}`)),
+    ]),
+  );
+  writeFileSync(join(staleRepo, "tracked.txt"), "second change\n");
+  const replacement = runCpc(staleRepo, [
+    "checkpoint", "same-name", "--check", "touch command-ran", "--rollback",
+    "git restore tracked.txt", "--json",
+  ]);
+  expect(replacement.status).toBe(1);
+  expect(JSON.parse(replacement.stdout).error.code).toBe("output_conflict");
+  for (const extension of ["json", "md", "patch"])
+    expect(readFileSync(join(outputDirectory, `same-name.${extension}`))).toEqual(before[extension]);
+  expect(existsSync(join(staleRepo, "command-ran"))).toBe(false);
+});
+
+test("@claim:safe-checkpoint-inputs verify rejects aliased manifest, trusted-key, and saved-patch inputs", () => {
+  const repo = makeGitRepository("cpc-input-alias-");
+  writeFileSync(join(repo, "tracked.txt"), "changed\n");
+  expect(runCpc(repo, [
+    "checkpoint", "safe", "--check", "true", "--rollback",
+    "git restore tracked.txt", "--include-diff", "--json",
+  ]).status).toBe(0);
+  const outputs = join(repo, ".change-checkpoints");
+  const manifest = join(outputs, "safe.json");
+
+  symlinkSync("safe.json", join(outputs, "manifest-link.json"));
+  const linkedManifest = runCpc(repo, ["verify", join(outputs, "manifest-link.json"), "--json"]);
+  expect(linkedManifest.status).toBe(1);
+  expect(JSON.parse(linkedManifest.stdout).error.code).toBe("unsafe_path");
+
+  linkSync(manifest, join(outputs, "manifest-hardlink.json"));
+  const hardlinkedManifest = runCpc(repo, ["verify", join(outputs, "manifest-hardlink.json"), "--json"]);
+  expect(hardlinkedManifest.status).toBe(1);
+  expect(JSON.parse(hardlinkedManifest.stdout).error.code).toBe("unsafe_path");
+  unlinkSync(join(outputs, "manifest-hardlink.json"));
+
+  symlinkSync("signing.pub", join(outputs, "trusted-link.pub"));
+  const linkedKey = runCpc(repo, [
+    "verify", manifest, "--trusted-key", join(outputs, "trusted-link.pub"), "--json",
+  ]);
+  expect(linkedKey.status).toBe(2);
+  expect(JSON.parse(linkedKey.stdout).findings[0]).toContain("trusted public key must be a regular file");
+
+  unlinkSync(join(outputs, "safe.patch"));
+  symlinkSync("../tracked.txt", join(outputs, "safe.patch"));
+  const linkedPatch = runCpc(repo, ["verify", manifest, "--json"]);
+  expect(linkedPatch.status).toBe(2);
+  expect(JSON.parse(linkedPatch.stdout).findings).toContain(
+    `saved patch must be a regular file: ${join(outputs, "safe.patch")}`,
+  );
+});
+
+test("@claim:validated-environment @claim:json-errors checkpoint validates environment input before commands and emits JSON errors", () => {
+  const repo = makeGitRepository("cpc-environment-input-");
+  for (const [value, environment] of [
+    ["BAD-NAME=value", {}],
+    ["QA_MODE=recorded", { QA_MODE: "actual" }],
+  ]) {
+    const result = runCpc(repo, [
+      "checkpoint", "invalid-env", "--check", "touch command-ran", "--env", value,
+      "--rollback", "git restore tracked.txt", "--json",
+    ], environment);
+    expect(result.status).toBe(1);
+    expect(JSON.parse(result.stdout)).toMatchObject({
+      ok: false,
+      error: { code: "invalid_environment" },
+    });
+    expect(existsSync(join(repo, "command-ran"))).toBe(false);
+  }
+
+  const valid = runCpc(repo, [
+    "checkpoint", "valid-env", "--check", "true", "--env", "QA_MODE=actual",
+    "--rollback", "git restore tracked.txt", "--json",
+  ], { QA_MODE: "actual" });
+  expect(valid.status).toBe(0);
+  const verified = runCpc(repo, [
+    "verify", JSON.parse(valid.stdout).manifest, "--json",
+  ], { QA_MODE: "actual" });
+  expect(verified.status).toBe(0);
+  expect(JSON.parse(verified.stdout).valid).toBe(true);
+
+  const outsideGit = mkdtempSync(join(tmpdir(), "cpc-json-error-"));
+  const noRepository = runCpc(outsideGit, [
+    "checkpoint", "outside", "--check", "true", "--rollback", "true", "--json",
+  ]);
+  expect(noRepository.status).toBe(1);
+  expect(JSON.parse(noRepository.stdout)).toMatchObject({
+    ok: false,
+    error: { code: "git_required" },
+  });
+  expect(noRepository.stderr).toBe("");
+
+  const badArguments = runCpc(repo, ["checkpoint", "missing-options", "--json"]);
+  expect(badArguments.status).toBe(2);
+  expect(JSON.parse(badArguments.stdout)).toMatchObject({
+    ok: false,
+    error: { code: "invalid_arguments" },
+  });
+  expect(badArguments.stderr).toBe("");
+});
+
+test("@claim:post-check-state checkpoint records Git state after successful checks", () => {
+  const repo = makeGitRepository("cpc-post-check-state-");
+  const created = runCpc(repo, [
+    "checkpoint", "mutating-check", "--check", "printf 'mutated\\n' >> tracked.txt",
+    "--rollback", "git restore tracked.txt", "--json",
+  ]);
+  expect(created.status).toBe(0);
+  const manifest = JSON.parse(readFileSync(JSON.parse(created.stdout).manifest, "utf8"));
+  expect(manifest.workspace.status).toContain("tracked.txt");
+  expect(manifest.checks[0].exit_code).toBe(0);
+  const verified = runCpc(repo, ["verify", JSON.parse(created.stdout).manifest, "--json"]);
+  expect(verified.status).toBe(0);
+  expect(JSON.parse(verified.stdout)).toMatchObject({ valid: true, findings: [] });
 });
 
 test("@claim:signed-manifest @claim:checkpoint-record @claim:markdown-summary @claim:cli-demo-isolated cpc demo writes the documented fields to its local repository", async () => {
@@ -370,7 +556,7 @@ test("@claim:no-command-output @claim:environment-hash checkpoint manifests omit
       "--rollback",
       "git restore src/a.txt",
     ],
-    { cwd: repo },
+    { cwd: repo, env: { ...process.env, PRIVATE_TOKEN: "PRIVATE_VALUE" } },
   );
   const text = readFileSync(
     join(repo, ".change-checkpoints", "quiet.json"),
@@ -520,6 +706,7 @@ test("@claim:optional-patch a patch is absent by default and present only when r
   expect(existsSync(join(repo, ".change-checkpoints", "plain.patch"))).toBe(
     false,
   );
+  writeFileSync(join(repo, "new-agent-file.txt"), "new agent file\n");
   execFileSync(
     "cargo",
     [
@@ -544,6 +731,23 @@ test("@claim:optional-patch a patch is absent by default and present only when r
   expect(
     existsSync(join(repo, ".change-checkpoints", "with-patch.patch")),
   ).toBe(true);
+  const patch = readFileSync(
+    join(repo, ".change-checkpoints", "with-patch.patch"),
+    "utf8",
+  );
+  expect(patch).toContain("diff --git a/new-agent-file.txt b/new-agent-file.txt");
+  expect(patch).toContain("+new agent file");
+  const manifest = JSON.parse(
+    readFileSync(join(repo, ".change-checkpoints", "with-patch.json"), "utf8"),
+  );
+  expect(manifest.workspace.untracked).toEqual([
+    expect.objectContaining({ path: "new-agent-file.txt" }),
+  ]);
+  const verified = runCpc(repo, [
+    "verify", join(repo, ".change-checkpoints", "with-patch.json"), "--json",
+  ]);
+  expect(verified.status).toBe(0);
+  expect(JSON.parse(verified.stdout).valid).toBe(true);
 });
 
 test("@claim:no-third-party-runtime every website route loads only same-origin resources", async ({
@@ -636,6 +840,16 @@ test("every route has valid landmarks, metadata, images, and no serious accessib
     expect(results.violations).toEqual([]);
   }
   expect(errors).toEqual([]);
+});
+
+test("@claim:live-build-id every live route exposes the production build identifier", async ({ page }) => {
+  const identifier = execFileSync("git", ["rev-parse", "--short=12", "HEAD"], {
+    encoding: "utf8",
+  }).trim();
+  for (const route of ["/", "/demo", "/privacy", "/terms", "/404.html"]) {
+    await page.goto(route);
+    await expect(page.locator("footer")).toContainText(`Build ${identifier}`);
+  }
 });
 
 test("SPA navigation restores route focus and browser history", async ({

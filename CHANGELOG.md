@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+- Refused symlinked, aliased, or same-name checkpoint artifacts without
+  replacing their targets.
+- Included new untracked files in opt-in patches and checked saved patch bytes
+  during verification.
+- Recorded stable Git state after checks and rechecked state after approved
+  verification runs.
+- Validated environment assertions before checks and returned structured
+  errors in JSON mode.
+- Added the Git build identifier to every site footer.
 - Pinned a trusted public key outside each manifest and blocked check reruns
   until trust, repository state, and explicit command approval all pass.
 - Added safe NUL-delimited Git path parsing for directories, spaces, Unicode,
