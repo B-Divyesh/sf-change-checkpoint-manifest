@@ -29,13 +29,16 @@ The full finding map is in `.factory/polish-6.md`.
 - `npm ci` completed with the lockfile.
 - `npx playwright test --grep 'Terms route heading names the legal page'`
   passed.
-- `npm test` passed: `cargo fmt --check`, Clippy with warnings denied, 4 Rust
-  tests, 7 Node deployment/claim-contract tests, and 35 Playwright tests.
-- `npm run build` passed, compiled the release binary, and produced `dist/site`.
+- In the fresh clone, `npm test` passed: `cargo fmt --check`, Clippy with
+  warnings denied, 4 Rust tests, 7 Node deployment/claim-contract tests, and
+  35 Playwright tests.
+- In that same clone, `npm run build` passed, compiled the release binary, and
+  produced `dist/site`.
   The built initial JavaScript is 11.42 kB raw / 4.34 kB gzip; CSS is 8.87 kB
   raw / 2.65 kB gzip; the original hero WebP is 209.50 kB.
-- `npm run pack:cli` passed: Cargo packaged and verified 44 files, 248.9 KiB
-  raw / 72.4 KiB compressed. It did not publish the package.
+- In that same clone, `npm run pack:cli` passed: Cargo packaged and verified
+  44 files, 248.9 KiB raw / 72.4 KiB compressed. It did not publish the
+  package.
 - Fresh clone `/tmp/change-checkpoints-polish-6.DX68p0/repo`: all 29 exact
   claim selectors from `.factory/claims.json` passed independently. The full
   list is in `.factory/evidence/polish-6/clean-clone-claims.md`.

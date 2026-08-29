@@ -35,6 +35,8 @@ command declared in `.factory/claims.json` passed independently:
 - `@claim:json-errors`
 - `@claim:post-check-state`
 
-The loop ended with `ALL_CLAIMS_PASS`. The full current-tree `npm test` also
-passed: Rust formatting and Clippy, 4 Rust tests, 7 Node deployment/claim
-contract tests, and 35 Playwright tests.
+The loop ended with `ALL_CLAIMS_PASS`. In the same clone, `npm test`,
+`npm run build`, and `npm run pack:cli` then passed. That covered Rust
+formatting and Clippy, 4 Rust tests, 7 Node deployment/claim-contract tests,
+and 35 Playwright tests; produced `dist/site`; and packaged and verified the
+44-file CLI archive.

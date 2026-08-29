@@ -44,12 +44,12 @@ URL is `https://change-checkpoint-manifest.sociobot.in`.
 
 ## Verification
 
-- Clean clone: all 29 exact claim commands passed independently; see
+- Clean clone: all 29 exact claim commands passed independently; then `npm
+  test`, `npm run build`, and `npm run pack:cli` passed in that same clone.
+  This covered formatting, Clippy, 4 Rust tests, 7 Node tests, and 35
+  Playwright tests; produced `dist/site`; and packaged 44 files (248.9 KiB
+  raw, 72.4 KiB compressed). See
   `.factory/evidence/polish-6/clean-clone-claims.md`.
-- Local: `npm test` passed (formatting, Clippy, 4 Rust tests, 7 Node tests,
-  and 35 Playwright tests); `npm run build` produced `dist/site`; and
-  `npm run pack:cli` packaged and verified 44 files (248.9 KiB raw,
-  72.4 KiB compressed).
 - Live: `/`, `/demo`, `/privacy`, `/terms`, and `/404.html` load cleanly;
   unknown routes return 404. Fresh live Axe WCAG A/AA scans found zero
   violations. The live audit saw no third-party runtime request, no overflow,
