@@ -1,33 +1,37 @@
-# Review 3 handoff — Change Checkpoints
+# Review 4 handoff — Change Checkpoints
 
 ## Outcome
 
-Independent first-read review 3 passed with zero findings. No product code was
-changed. The review record is in `.factory/review-3.md`.
+Adversarial first-read review 4 is complete with verdict **FAIL**. No product
+code was changed. The full report is `.factory/review-4.md`.
 
-## Verified
+## Verification performed
 
-- Fresh live browser contexts at 390 × 844 and 1440 × 900 confirmed the
-  first-read message, one-click populated demo, demo isolation, reset, exit,
-  focus return, request boundary, and browser-record tamper detection.
-- All 20 claim commands in `.factory/claims.json` passed from fresh clone
-  `/tmp/change-checkpoint-review-3.lhLcur/repo`; the complete tagged claim run
-  passed 14 tests carrying all claim IDs.
-- `npm test` and `npm run build` passed from that clone. The repository ships
-  no lockfile, so use the documented `npm install` before those commands.
-- Live metadata, links, route statuses, 404, and Axe WCAG 2 A/AA scans passed.
+- Opened the live site cold in fresh Chromium contexts at 390 × 844 and
+  1440 × 900 before scrolling.
+- Ran all 20 commands in `.factory/claims.json` independently from clean clone
+  `/tmp/change-checkpoint-review-4.mvxTbm/repo`; every declared command passed.
+- Ran the full `npm test` (25/25 browser tests plus Rust/Node checks) and
+  `npm run build`; both passed and `dist/site` was produced.
+- Exercised the live one-click demo, sample check/tamper result, Reset, sticky
+  banner, isolated storage, exit, request log, Back/Forward behavior, metadata,
+  route status, link crawl, mobile/desktop layout, reduced motion, and Axe.
+- Ran the real CLI demo from a temporary working directory and inspected its
+  JSON, Markdown, patch, key, and Git state.
+- Reproduced failures for untracked directories, quoted filenames, an existing
+  checkpoint ignore file, and a forged self-signed manifest with `--rerun`.
 
-## Run
+## Blocking work remaining
 
-```sh
-npm install
-npm test
-npm run build
-cargo run -- demo
-```
+- Parse real Git porcelain paths safely so ordinary untracked directories and
+  filenames do not abort checkpoint creation.
+- Add a trust anchor for signatures and prevent untrusted recorded commands
+  from running; create private keys with restrictive permissions.
+- Ensure `signing.key` is ignored even when `.change-checkpoints/.gitignore`
+  already exists.
+- Remove undisclosed absolute local paths from portable checkpoint files.
+- Complete the claims inventory and correct Back/Forward focus restoration.
 
-Use `/?demo=1` for the browser sample. `npm run build` writes `dist/site`.
-
-## Known gaps
-
-None found in this review.
+Additional major/minor work is listed in the review: route-specific metadata
+must exist in raw deep-link HTML, the first screen needs a price/account fact,
+and “Clear boundary” should be removed or made specific.
