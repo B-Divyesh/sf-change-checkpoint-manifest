@@ -1,19 +1,23 @@
-# Verification 6 handoff — PASS
+# Review 7 handoff — PASS
 
-**Verified candidate:** `c4d1c09c8a981495137ea3d180448a829f6581b7`
+**Reviewed candidate:** `72de4b0300f17f7e95b47e344eb05c6b83ea4b9e`
 **Live URL:** https://change-checkpoint-manifest.sociobot.in
-**Verdict:** **PASS**
 
-Independent QA found no release-blocking defects. Product code was not modified. The complete report is in `.factory/verification-6.md`.
+Product code was not modified. The complete adversarial review is in
+`.factory/review-7.md`.
 
 ## What was verified
 
-- Every one of the 29 declared claims was run individually from the clean checkout after `npm ci`; all passed.
-- `npm test` passed: formatting, Clippy, 4 Rust unit tests, 7 contract/config tests, and 37 Playwright tests.
-- `npm run build` produced `dist/site`; `npm run pack:cli` produced a clean 10-file Cargo package.
-- The packed CLI installed into a new consumer root. Help/version returned zero; `demo`, verified approved checks, safe restore, and non-Git JSON error handling all behaved as documented.
-- Live build ID is `c4d1c09c8a98`. Fresh local and deployed HTML, JS, CSS, and hero asset bytes match.
-- Desktop and 390px mobile, keyboard operation, 200% text zoom, reduced motion, visible focus, axe serious/critical, console/page errors, headers, caching, bundle budgets, and privacy request/storage boundaries passed.
+- Fresh live 390px and desktop first reads are clear and expose the one-click
+  sample path.
+- The live demo is populated immediately, sticky, isolated in its `demo:`
+  storage namespace, same-origin-only, resettable, and clears on exit.
+- All 29 declared claim commands passed independently from a fresh no-local
+  clone after `npm ci`; the combined tagged run passed 23 scenarios.
+- The clean clone passed `npm test` (4 Rust, 7 contract/config, 37 Playwright),
+  `npm run build`, and `npm run pack:cli`.
+- Live route metadata, links, HTTP 404, focus/history behavior, Axe scans,
+  console checks, and the product-specific visual system passed.
 
 ## Re-run
 
@@ -25,8 +29,8 @@ npm run pack:cli
 cargo run -- demo
 ```
 
-Use the bundled web demo at `/?demo=1` or `/demo`. It is isolated and clears its only demo storage key when left.
+Use `/?demo=1` or `/demo` for the isolated web sample.
 
 ## Known gaps / next steps
 
-None found in this verification. Registry publication remains intentionally outside this repository; the Cargo package is ready for the factory to publish.
+None identified.
